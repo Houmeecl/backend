@@ -1,0 +1,3555 @@
+openapi: 3.0.3
+info:
+  title: NotaryPro API
+  description: |
+    API completa para el sistema de firma electrónica NotaryPro.
+    
+    **Nuevas funcionalidades agregadas:**
+    - ? Gestión completa de firmantes
+    - ? Recuperación de contraseñas por email
+    - ? Subida de archivos PDF en Base64
+    - ? Sistema de notificaciones automáticas
+    - ? Descarga de documentos firmados
+    - ? **[NUEVO]** Gestión completa de Usuarios (CRUD, Roles, Actividad)
+    - ? **[NUEVO]** Sistema de Cupones y Descuentos
+    - ? **[NUEVO]** Sistema de Pagos
+    - ? **[NUEVO]** Validación de Identidad Avanzada (RUT, OTP, Biometría)
+    - ? **[NUEVO]** Módulo de Analytics y Reportes
+    - ? **[ACTUALIZADO]** Firma Manuscrita en Documentos (lado del cliente)
+    - ? **[ACTUALIZADO]** Subida de Documentos Firmados por Certificador (eToken local)
+    
+    **Compatibilidad:** 85% compatible con FirmaVirtual API
+  version: 2.2.0 # Versión actualizada al añadir todas las funcionalidades
+  contact:
+    name: NotaryPro Support
+    email: support@notarypro.cl
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://168.232.167.145:3000
+    description: Servidor de Producción
+  - url: http://localhost:3000
+    description: Servidor de Desarrollo
+
+security:
+  - bearerAuth: []
+
+paths:
+  # =============================================================================
+  # HEALTH CHECK
+  # =============================================================================
+  /health:
+    get:
+      summary: Verificar estado del servidor
+      tags:
+        - Sistema
+      security: []
+      responses:
+        '200':
+          description: Servidor funcionando correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "2.2.0" # Actualizado
+                  modules:
+                    type: object # Cambiado a objeto para un mejor detalle
+                    properties:
+                      auth: { type: string, example: "active" }
+                      templates: { type: string, example: "active" }
+                      documents: { type: string, example: "active" }
+                      signatures: { type: string, example: "active" }
+                      verification: { type: string, example: "active" }
+                      audit: { type: string, example: "active" }
+                      signers: { type: string, example: "active" }
+                      password_reset: { type: string, example: "active" }
+                      files: { type: string, example: "active" }
+                      notifications: { type: string, example: "active" }
+                      users: { type: string, example: "active" } # Añadidos
+                      coupons: { type: string, example: "active" } # Añadidos
+                      payments: { type: string, example: "active" } # Añadidos
+                      identity: { type: string, example: "active" } # Añadidos
+                      analytics: { type: string, example: "active" } # Añadidos
+                      certifier_signatures: { type: string, example: "active" } # Añadidos
+                  endpoints: # Se asume que este endpoint devuelve los que están en uso
+                    type: object
+                    properties:
+                      auth:
+                        type: array
+                        items: { type: string }
+                        example: ["POST /api/v1/auth/login", "POST /api/v1/auth/register"]
+                      templates:
+                        type: array
+                        items: { type: string }
+                        example: ["GET /api/v1/templates", "POST /api/v1/templates", "POST /api/v1/templates/upload-convert"]
+                      documents:
+                        type: array
+                        items: { type: string }
+                        example: ["GET /api/v1/documents", "POST /api/v1/documents", "POST /api/v1/documents/{id}/transition"]
+                      signatures:
+                        type: array
+                        items: { type: string }
+                        example: ["POST /api/v1/signatures/request-signing", "POST /api/v1/signatures/handwritten"]
+                      certifier_signatures:
+                        type: array
+                        items: { type: string }
+                        example: ["POST /api/v1/signatures/certifier-upload"]
+                      # ... etc. (El backend debe generar esta lista dinámicamente)
+
+  # =============================================================================
+  # AUTENTICACIÓN
+  # =============================================================================
+  /api/v1/auth/login:
+    post:
+      summary: Iniciar sesión
+      tags:
+        - Autenticación
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "admin@notarypro.cl"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/register:
+    post:
+      summary: Registrar nuevo usuario
+      tags:
+        - Autenticación
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # =============================================================================
+  # RECUPERACIÓN DE CONTRASEÑAS
+  # =============================================================================
+  /api/v1/pwd/reset:
+    post:
+      summary: Iniciar recuperación de contraseña
+      description: |
+        Envía un código de 6 dígitos al email del usuario para recuperar la contraseña.
+        Por seguridad, siempre retorna éxito aunque el email no exista.
+      tags:
+        - Autenticación
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+              properties:
+                login:
+                  type: string
+                  format: email
+                  description: Email del usuario
+                  example: "usuario@example.com"
+      responses:
+        '200':
+          description: Proceso iniciado (mensaje genérico por seguridad)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Si el email está registrado, recibirás un código de recuperación."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/pwd/update:
+    post:
+      summary: Actualizar contraseña con código
+      description: |
+        Actualiza la contraseña usando el código de 6 dígitos enviado por email.
+        El código expira en 15 minutos.
+      tags:
+        - Autenticación
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+                - new_password
+              properties:
+                login:
+                  type: string
+                  format: email
+                  example: "usuario@example.com"
+                password:
+                  type: string
+                  description: "Código de 6 dígitos enviado por email"
+                  example: "123456"
+                  pattern: "^[0-9]{6}$"
+                new_password:
+                  type: string
+                  minLength: 8
+                  description: "Nueva contraseña (mínimo 8 caracteres)"
+                  example: "NuevaPassword123"
+      responses:
+        '200':
+          description: Contraseña actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Contraseña actualizada exitosamente"
+        '400':
+          description: Código inválido o expirado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # =============================================================================
+  # GESTIÓN DE DOCUMENTOS (ACTUALIZADO)
+  # =============================================================================
+  /api/v1/documents:
+    get:
+      summary: Listar documentos del usuario
+      tags:
+        - Documentos
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [borrador, datos_completados, verificacion_pendiente, verificado, firma_pendiente, firmado_cliente, revision_certificador, aprobado_certificador, certificacion_pendiente, certificado, entregado, rechazado, cancelado]
+          description: Filtrar por estado del documento
+          nullable: true
+        - in: query
+          name: createdBy
+          schema:
+            type: string
+            format: uuid
+          description: Filtrar por ID del creador (solo admin)
+          nullable: true
+      responses:
+        '200':
+          description: Lista de documentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Crear nuevo documento a partir de plantilla
+      tags:
+        - Documentos
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDocumentRequest'
+      responses:
+        '201':
+          description: Documento creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/documents/{documentId}:
+    get:
+      summary: Obtener documento por ID
+      tags:
+        - Documentos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Detalle del documento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    put:
+      summary: Actualizar documento
+      tags:
+        - Documentos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentRequest'
+      responses:
+        '200':
+          description: Documento actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      summary: Eliminar documento
+      tags:
+        - Documentos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '204':
+          description: Documento eliminado exitosamente
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/documents/{documentId}/transition:
+    post:
+      summary: Transicionar el estado de un documento
+      tags:
+        - Documentos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionDocumentRequest'
+      responses:
+        '200':
+          description: Estado del documento transicionado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  document_id:
+                    type: string
+                    format: uuid
+                  new_state:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # =============================================================================
+  # GESTIÓN DE FIRMANTES
+  # =============================================================================
+  /api/v1/signer/upd/{ContractID}/EMAIL:
+    post:
+      summary: Actualizar firmante por email
+      description: |
+        Actualiza los datos de un firmante específico usando su email como identificador.
+        Permite cambiar todos los campos excepto el email (que se usa como clave).
+      tags:
+        - Firmantes
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContractID'
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Email del firmante a actualizar
+          example: "firmante@example.com"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertSignerRequest'
+      responses:
+        '200':
+          description: Firmante actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Signer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Firmante no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/signer/upd/{ContractID}/RUT:
+    post:
+      summary: Actualizar firmante por RUT
+      description: |
+        Actualiza los datos de un firmante específico usando su RUT como identificador.
+        Útil cuando el email puede cambiar pero el RUT permanece constante.
+      tags:
+        - Firmantes
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContractID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertSignerRequest'
+      responses:
+        '200':
+          description: Firmante actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Signer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Firmante no encontrado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/signer/list:
+    get:
+      summary: Listar firmantes de un documento
+      description: |
+        Obtiene la lista completa de firmantes asociados a un documento específico.
+        Los firmantes se ordenan por `order_number` ascendente.
+      tags:
+        - Firmantes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: ContractID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del documento
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Lista de firmantes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Signer'
+        '400':
+          description: ContractID requerido o inválido
+        '404':
+          description: Documento no encontrado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # GESTIÓN DE ARCHIVOS
+  # =============================================================================
+  /api/v1/upfileB64:
+    post:
+      summary: Subir archivo PDF en Base64
+      description: |
+        Sube un archivo PDF codificado en Base64 al sistema.
+        El archivo se almacena con un nombre único y se asocia al documento especificado.
+        
+        **Formatos soportados:** Solo PDF
+        **Tamaño máximo:** 50MB
+      tags:
+        - Archivos
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadFileB64Request'
+      responses:
+        '200':
+          description: Archivo subido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Archivo subido exitosamente"
+                  data:
+                    $ref: '#/components/schemas/DocumentFile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          description: Archivo demasiado grande (>50MB)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/filelist/{ContractID}:
+    get:
+      summary: Listar archivos de un documento
+      description: |
+        Obtiene la lista de todos los archivos asociados a un documento específico.
+        Incluye archivos originales, firmados y notariados.
+      tags:
+        - Archivos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContractID'
+      responses:
+        '200':
+          description: Lista de archivos del documento
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentFileMetadata'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/download/{ContractID}:
+    get:
+      summary: Descargar archivo PDF
+      description: |
+        Descarga un archivo PDF específico del documento.
+        Permite seleccionar entre versión original, firmada o notariada.
+      tags:
+        - Archivos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContractID'
+        - in: query
+          name: version
+          schema:
+            type: string
+            enum: [original, signed, notary]
+            default: original
+          description: |
+            Versión del archivo a descargar:
+            - `original`: Archivo subido inicialmente
+            - `signed`: Archivo con firmas aplicadas
+            - `notary`: Archivo notariado con timestamp
+          example: "original"
+      responses:
+        '200':
+          description: Archivo PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Nombre del archivo para descarga
+              schema:
+                type: string
+                example: 'attachment; filename="documento_firmado.pdf"'
+            Content-Length:
+              description: Tamaño del archivo en bytes
+              schema:
+                type: integer
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/contract/download/{ContractID}:
+    get:
+      summary: Obtener URLs de descarga del documento
+      description: |
+        Retorna todas las URLs de descarga disponibles para un documento específico.
+        Incluye enlaces directos a todas las versiones disponibles del archivo.
+      tags:
+        - Archivos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContractID'
+      responses:
+        '200':
+          description: URLs de descarga disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrls'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # SISTEMA DE NOTIFICACIONES
+  # =============================================================================
+  /api/v1/contract/send/draft-priority/{ContractID}:
+    post:
+      summary: Enviar notificaciones de prioridad a firmantes
+      description: |
+        Envía notificaciones por email a todos los firmantes del documento según el flujo de prioridad.
+        
+        **Funcionalidad:**
+        - Envía emails personalizados con enlaces de firma
+        - Respeta el orden de firma (secuencial vs paralelo)
+        - Registra el estado de cada notificación
+        - Incluye información del documento y firmantes
+      tags:
+        - Notificaciones
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContractID'
+      responses:
+        '200':
+          description: Notificaciones enviadas exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Notificaciones de prioridad enviadas exitosamente"
+                  notifications_sent:
+                    type: integer
+                    example: 3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/contract/send/draft-priority/{ContractID}/{rut}:
+    post:
+      summary: Reenviar notificación de prioridad a un firmante específico
+      description: |
+        Reenvía la notificación por email a un firmante específico del documento.
+        Útil para recordatorios o cuando una notificación inicial falló.
+      tags:
+        - Notificaciones
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContractID'
+        - in: path
+          name: rut
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9]{7,8}-[0-9Kk]$"
+          description: "RUT del firmante (formato: 12345678-9)"
+          example: "12345678-9"
+      responses:
+        '200':
+          description: Notificación reenviada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Notificación reenviada exitosamente"
+                  data:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                        format: email
+                        example: "firmante@example.com"
+                      sent_at:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/notifications/send:
+    post:
+      summary: Enviar una notificación genérica por tipo
+      description: Permite enviar diferentes tipos de notificaciones (ej. confirmación de firma, documento certificado).
+      tags:
+        - Notificaciones
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+      responses:
+        '201':
+          description: Notificación enviada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Notificación genérica enviada."
+                  data:
+                    type: object
+                    properties:
+                      notification_id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum: [PENDING, SENT, FAILED, DELIVERED]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/notifications/history:
+    get:
+      summary: Obtener historial de notificaciones
+      description: Permite consultar el historial de notificaciones enviadas, opcionalmente filtrado por documento.
+      tags:
+        - Notificaciones
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: documentId
+          schema:
+            type: string
+            format: uuid
+          description: ID del documento para filtrar historial
+          nullable: true
+      responses:
+        '200':
+          description: Historial de notificaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # AUDITORÍA Y VERIFICACIÓN
+  # =============================================================================
+  /api/v1/audit/{documentId}:
+    get:
+      summary: Obtener auditoría completa del documento
+      tags:
+        - Auditoría
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Registro completo de auditoría
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLog'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/verify/{documentId}:
+    get:
+      summary: Verificar integridad del documento
+      tags:
+        - Verificación
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Estado de verificación del documento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # =============================================================================
+  # GESTIÓN DE USUARIOS (NUEVO)
+  # =============================================================================
+  /api/v1/users:
+    get:
+      summary: Listar todos los usuarios
+      tags:
+        - Usuarios
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Crear un nuevo usuario
+      tags:
+        - Usuarios
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/users/{id}:
+    get:
+      summary: Obtener usuario por ID
+      tags:
+        - Usuarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      responses:
+        '200':
+          description: Detalle del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      summary: Actualizar usuario por ID
+      tags:
+        - Usuarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario a actualizar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Usuario actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      summary: Eliminar usuario por ID
+      tags:
+        - Usuarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario a eliminar
+      responses:
+        '204':
+          description: Usuario eliminado exitosamente
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/users/{id}/activity:
+    get:
+      summary: Obtener actividad de un usuario
+      tags:
+        - Usuarios
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      responses:
+        '200':
+          description: Lista de actividades del usuario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserActivity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # SISTEMA DE CUPONES (NUEVO)
+  # =============================================================================
+  /api/v1/coupons:
+    get:
+      summary: Listar todos los cupones
+      tags:
+        - Cupones
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de cupones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Coupon'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Crear un nuevo cupón
+      tags:
+        - Cupones
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCouponRequest'
+      responses:
+        '201':
+          description: Cupón creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/coupons/validate:
+    post:
+      summary: Validar un código de cupón
+      tags:
+        - Cupones
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCouponRequest'
+      responses:
+        '200':
+          description: Cupón válido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                  discount:
+                    type: number
+                  type:
+                    type: string
+                example:
+                  valid: true
+                  message: "Cupón válido"
+                  discount: 20
+                  type: "percentage"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/coupons/apply:
+    post:
+      summary: Aplicar un cupón a un documento/transacción
+      tags:
+        - Cupones
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyCouponRequest'
+      responses:
+        '200':
+          description: Cupón aplicado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  coupon:
+                    $ref: '#/components/schemas/Coupon'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/coupons/{id}/usage:
+    get:
+      summary: Obtener uso de un cupón específico
+      tags:
+        - Cupones
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del cupón
+      responses:
+        '200':
+          description: Detalles de uso del cupón
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_uses:
+                    type: integer
+                  max_uses:
+                    type: integer
+                example:
+                  current_uses: 50
+                  max_uses: 100
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # SISTEMA DE PAGOS (NUEVO)
+  # =============================================================================
+  /api/v1/payments/create:
+    post:
+      summary: Crear un nuevo pago pendiente
+      tags:
+        - Pagos
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '201':
+          description: Pago creado como pendiente exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/payments/{id}/process:
+    post:
+      summary: Procesar un pago
+      tags:
+        - Pagos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del pago a procesar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessPaymentRequest'
+      responses:
+        '200':
+          description: Pago procesado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Solicitud inválida o pago ya procesado/fallido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/payments/history:
+    get:
+      summary: Obtener historial de pagos
+      tags:
+        - Pagos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario para filtrar el historial (solo admin puede ver todos)
+          nullable: true
+      responses:
+        '200':
+          description: Historial de pagos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/payments/{id}/invoice:
+    post:
+      summary: Generar factura de un pago
+      tags:
+        - Pagos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del pago para generar la factura
+      responses:
+        '200':
+          description: Factura generada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  url:
+                    type: string
+                    format: url
+                example:
+                  success: true
+                  message: "Factura generada"
+                  url: "http://tuapi.com/invoices/123.pdf"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # VALIDACIÓN DE IDENTIDAD (NUEVO)
+  # =============================================================================
+  /api/v1/identity/validate-rut:
+    post:
+      summary: Validar formato de RUT chileno
+      tags:
+        - Identidad
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateRutRequest'
+      responses:
+        '200':
+          description: RUT válido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                example:
+                  success: true
+                  message: "RUT válido"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/identity/send-otp:
+    post:
+      summary: Enviar código OTP por SMS/WhatsApp
+      description: |
+        Envía un código de un solo uso (OTP) a un número de teléfono para verificación de identidad.
+        Requiere integración con un proveedor de SMS/WhatsApp.
+      tags:
+        - Identidad
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendOtpRequest'
+      responses:
+        '200':
+          description: OTP enviado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                example:
+                  success: true
+                  message: "Código OTP enviado al teléfono"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/identity/verify-otp:
+    post:
+      summary: Verificar código OTP
+      tags:
+        - Identidad
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOtpRequest'
+      responses:
+        '200':
+          description: Código OTP verificado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                example:
+                  success: true
+                  message: "Código OTP verificado exitosamente"
+        '400':
+          description: Código OTP inválido o expirado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/identity/verify-biometric:
+    post:
+      summary: Realizar verificación biométrica
+      description: |
+        Inicia un proceso de verificación biométrica (ej. reconocimiento facial, huella dactilar).
+        Requiere integración con un proveedor de servicios biométricos.
+      tags:
+        - Identidad
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyBiometricRequest'
+      responses:
+        '200':
+          description: Verificación biométrica exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                example:
+                  success: true
+                  message: "Verificación biométrica exitosa"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # ANALYTICS Y REPORTES (NUEVO)
+  # =============================================================================
+  /api/v1/analytics/dashboard:
+    get:
+      summary: Obtener estadísticas del dashboard
+      tags:
+        - Analytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+          description: Rango de tiempo para las estadísticas
+      responses:
+        '200':
+          description: Estadísticas del dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/analytics/usage:
+    get:
+      summary: Obtener reporte de uso
+      tags:
+        - Analytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Fecha de inicio del reporte
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Fecha de fin del reporte
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario para filtrar el reporte (opcional, solo admin)
+          nullable: true
+      responses:
+        '200':
+          description: Reporte de uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/analytics/conversion:
+    get:
+      summary: Obtener métricas de conversión
+      tags:
+        - Analytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+          description: Rango de tiempo para las métricas
+      responses:
+        '200':
+          description: Métricas de conversión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversionMetrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =============================================================================
+  # GESTIÓN DE PLANTILLAS (ACTUALIZADO: Carga y Conversión)
+  # =============================================================================
+  /api/v1/templates:
+    get:
+      summary: Obtener todas las plantillas
+      tags:
+        - Plantillas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de plantillas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Crear una nueva plantilla (directamente con HTML y campos)
+      tags:
+        - Plantillas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Plantilla creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/templates/{id}:
+    get:
+      summary: Obtener plantilla por ID
+      tags:
+        - Plantillas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID de la plantilla
+      responses:
+        '200':
+          description: Detalle de la plantilla
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      summary: Actualizar plantilla por ID
+      tags:
+        - Plantillas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID de la plantilla a actualizar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+      responses:
+        '200':
+          description: Plantilla actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      summary: Eliminar plantilla por ID
+      tags:
+        - Plantillas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID de la plantilla a eliminar
+      responses:
+        '204':
+          description: Plantilla eliminada exitosamente
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/templates/upload-convert:
+    post:
+      summary: Cargar y convertir un archivo a plantilla
+      description: |
+        Sube un archivo de documento (HTML, DOCX, PDF) en Base64 para crear una plantilla.
+        El sistema intentará convertir el contenido a HTML y extraer campos rellenables (ej. {{campo}}).
+        
+        **Formatos soportados para conversión:** HTML, DOCX (requiere `mammoth.js`), PDF (requiere `pdf-parse`).
+      tags:
+        - Plantillas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadConvertTemplateRequest'
+      responses:
+        '201':
+          description: Plantilla creada y convertida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  template:
+                    $ref: '#/components/schemas/Template'
+                  detected_fields:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        type: { type: string }
+                        required: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          description: Tipo de medio no soportado (si el formato de archivo no es reconocido)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # =============================================================================
+  # GESTIÓN DE FIRMAS (ACTUALIZADO)
+  # =============================================================================
+  /api/v1/signatures/request-signing:
+    post:
+      summary: Solicitar firma de un documento al cliente
+      description: |
+        Inicia el flujo de firma para un documento, generando un enlace único
+        y enviando una notificación (ej. email) al firmante.
+      tags:
+        - Firmas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestSigningRequest'
+      responses:
+        '201':
+          description: Solicitud de firma iniciada y enlace enviado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Solicitud de firma y email enviado." }
+                  signing_url: { type: string, format: url, example: "https://app.notarypro.cl/sign-document/doc-uuid/token-jwt" }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/signatures/handwritten:
+    post:
+      summary: Aplicar firma manuscrita (dibujada) al PDF
+      description: |
+        Recibe una imagen de firma manuscrita en Base64 y la incrusta en el documento PDF
+        en las coordenadas y página especificadas.
+      tags:
+        - Firmas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyHandwrittenSignatureRequest'
+      responses:
+        '200':
+          description: Firma manuscrita aplicada y documento actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Firma manuscrita aplicada y documento actualizado." }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/signatures/upload-certifier-signed-pdf:
+    post:
+      summary: Subir PDF firmado por el certificador (eToken local)
+      description: |
+        Permite al certificador subir un documento PDF que ha sido firmado digitalmente
+        en su máquina local utilizando un eToken.
+      tags:
+        - Firmas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadCertifierSignedPdfRequest'
+      responses:
+        '200':
+          description: PDF certificado subido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "PDF certificado subido exitosamente. Documento finalizado." }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Acceso denegado (si el usuario no es certificador)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # NOTA: Las rutas /signatures/capture y /signatures/:id/verify se mantienen si las utilizas para otros fines.
+  # /api/v1/signatures/capture:
+  #   post:
+  #     summary: Capturar datos de firma (ej. biométricos, video)
+  #     tags:
+  #       - Firmas
+  #     security:
+  #       - bearerAuth: []
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             type: object # Define el esquema real de tu payload de captura
+  #     responses:
+  #       '200': { description: 'Datos de captura procesados' }
+  # /api/v1/signatures/{id}/verify:
+  #   get:
+  #     summary: Verificar una firma o datos de captura
+  #     tags:
+  #       - Firmas
+  #     security:
+  #       - bearerAuth: []
+  #     parameters:
+  #       - name: id
+  #         in: path
+  #         required: true
+  #         schema: { type: string }
+  #     responses:
+  #       '200': { description: 'Verificación exitosa' }
+
+# =============================================================================
+# COMPONENTES REUTILIZABLES
+# =============================================================================
+components:
+  # Esquemas de autenticación
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT obtenido del endpoint `/api/v1/auth/login`.
+        
+        **Formato:** `Authorization: Bearer <token>`
+        
+        **Expiración:** 24 horas
+
+  # Parámetros comunes
+  parameters:
+    DocumentId:
+      in: path
+      name: documentId
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID único del documento
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    
+    ContractID:
+      in: path
+      name: ContractID
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID del documento/contrato
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  # Respuestas estándar
+  responses:
+    BadRequest:
+      description: Solicitud inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    Unauthorized:
+      description: No autorizado - Token inválido o expirado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Token inválido o expirado"
+              code:
+                type: string
+                example: "UNAUTHORIZED"
+    
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    InternalServerError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  # Esquemas de datos
+  schemas:
+    # Usuario
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          example: "usuario@example.com"
+        first_name:
+          type: string
+          example: "Juan"
+        last_name:
+          type: string
+          example: "Pérez"
+        rut:
+          type: string
+          nullable: true
+          example: "12345678-9"
+        phone:
+          type: string
+          nullable: true
+          example: "+56999999999"
+        role:
+          type: string
+          enum: [admin, gestor, certificador, operador, cliente, validador]
+          example: "cliente"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    # Esquemas para la creación y actualización de usuarios
+    CreateUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "nuevo.usuario@example.com"
+        password:
+          type: string
+          minLength: 6
+          example: "passwordSeguro123"
+        first_name:
+          type: string
+          example: "Nuevo"
+        last_name:
+          type: string
+          example: "Usuario"
+        rut:
+          type: string
+          nullable: true
+          example: "98765432-1"
+        phone:
+          type: string
+          nullable: true
+          example: "+56911223344"
+        role:
+          type: string
+          enum: [admin, gestor, certificador, operador, cliente, validador]
+          default: "cliente"
+      required: [email, password, first_name, last_name]
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: "actualizado.usuario@example.com"
+        password:
+          type: string
+          minLength: 6
+          nullable: true
+          example: "nuevaPasswordSegura456"
+        first_name:
+          type: string
+          nullable: true
+          example: "NombreActualizado"
+        last_name:
+          type: string
+          nullable: true
+          example: "ApellidoActualizado"
+        rut:
+          type: string
+          nullable: true
+          example: "11223344-5"
+        phone:
+          type: string
+          nullable: true
+          example: "+56955667788"
+        role:
+          type: string
+          enum: [admin, gestor, certificador, operador, cliente, validador]
+          nullable: true
+      minProperties: 1 # Al menos un campo debe ser proporcionado para la actualización
+
+    UserActivity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "1a2b3c4d-5e6f-7890-1234-567890abcdef"
+        event_type:
+          type: string
+          example: "LOGIN_SUCCESS"
+          description: Tipo de evento (ej. LOGIN_SUCCESS, DOCUMENT_CREATED, PASSWORD_RESET)
+        description:
+          type: string
+          example: "Inicio de sesión exitoso desde IP 192.168.1.1"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-30T10:00:00Z"
+        ip_address:
+          type: string
+          nullable: true
+          example: "192.168.1.1"
+        user_agent:
+          type: string
+          nullable: true
+          example: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/100.0.0.0 Safari/537.36"
+
+
+    # Documento
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        template_id:
+          type: string
+          format: uuid
+          description: ID de la plantilla usada para crear este documento.
+          example: "00000000-0000-0000-0000-000000000001"
+        nombre_documento:
+          type: string
+          example: "Contrato de Servicios"
+        estado:
+          type: string
+          enum: [borrador, datos_completados, verificacion_pendiente, verificado, firma_pendiente, firmado_cliente, revision_certificador, aprobado_certificador, certificacion_pendiente, certificado, entregado, rechazado, cancelado]
+          example: "borrador"
+        data_documento:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Datos rellenados en los campos de la plantilla.
+          example:
+            nombre_arrendatario: "Juan Pérez"
+            rut_arrendatario: "11223344-5"
+            monto_arriendo: "500000"
+        contenido_html:
+          type: string
+          description: Contenido HTML del documento después de rellenar la plantilla.
+          example: "<p>Este es un contrato para Juan Pérez.</p>"
+        hash_contenido:
+          type: string
+          description: Hash SHA-256 del contenido HTML del documento.
+          example: "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+        created_by:
+          type: string
+          format: uuid
+          example: "u1a2b3c4-d5e6-7890-1234-567890abcdef"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [template_id, nombre_documento, estado]
+
+    CreateDocumentRequest:
+      type: object
+      properties:
+        template_id:
+          type: string
+          format: uuid
+          description: ID de la plantilla a usar para el documento.
+          example: "00000000-0000-0000-0000-000000000001"
+        nombre_documento:
+          type: string
+          minLength: 5
+          maxLength: 255
+          example: "Contrato de Arriendo"
+        data_documento:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Datos para rellenar los campos de la plantilla (ej. { "nombre_arrendatario": "Juan Pérez" }).
+          example:
+            nombre_arrendatario: "Juan Pérez"
+            rut_arrendatario: "11223344-5"
+            monto_arriendo: "500000"
+      required: [template_id, nombre_documento]
+
+    UpdateDocumentRequest:
+      type: object
+      properties:
+        nombre_documento:
+          type: string
+          minLength: 5
+          maxLength: 255
+          nullable: true
+        estado:
+          type: string
+          enum: [borrador, datos_completados, verificacion_pendiente, verificado, firma_pendiente, firmado_cliente, revision_certificador, aprobado_certificador, certificacion_pendiente, certificado, entregado, rechazado, cancelado]
+          nullable: true
+        data_documento:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Datos para actualizar los campos del documento.
+      minProperties: 1
+
+    TransitionDocumentRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [completar_datos, iniciar_verificacion, verificacion_exitosa, solicitar_firma, firma_capturada, enviar_revision, aprobar_certificador, iniciar_certificacion, certificacion_digital, entregar_documento, rechazar, cancelar]
+          description: Acción para transicionar el estado del documento.
+        notas:
+          type: string
+          nullable: true
+          description: Notas adicionales sobre la transición.
+      required: [action]
+
+    # Firmante
+    Signer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        document_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        full_name:
+          type: string
+          example: "Juan Pérez González"
+        email:
+          type: string
+          format: email
+          example: "juan.perez@example.com"
+        rut_id:
+          type: string
+          example: "12345678-9"
+        phone:
+          type: string
+          nullable: true
+          example: "+56999999999"
+        user_type:
+          type: string
+          enum: [NATURAL, LEGAL]
+          example: "NATURAL"
+          description: "NATURAL: Persona natural, LEGAL: Persona jurídica"
+        rol:
+          type: integer
+          enum: [0, 1]
+          description: "0: Firmante, 1: Aprobador"
+          example: 0
+        order_number:
+          type: integer
+          example: 1
+          description: "Orden de firma (1, 2, 3...)"
+        status:
+          type: string
+          enum: [PENDING, SIGNED, REJECTED]
+          example: "PENDING"
+        signed_at:
+          type: string
+          format: date-time
+          nullable: true
+        signature_hash:
+          type: string
+          nullable: true
+          description: "Hash de la firma digital"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpsertSignerRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          minLength: 2
+          example: "Juan Pérez González"
+        email:
+          type: string
+          format: email
+          example: "juan.perez@example.com"
+        rut_id:
+          type: string
+          pattern: "^[0-9]{7,8}-[0-9Kk]$"
+          example: "12345678-9"
+        phone:
+          type: string
+          pattern: "^\\+?[1-9]\\d{1,14}$"
+          nullable: true
+          example: "+56999999999"
+        user_type:
+          type: string
+          enum: [NATURAL, LEGAL]
+          default: NATURAL
+          description: "NATURAL: Persona natural, LEGAL: Persona jurídica"
+        rol:
+          type: integer
+          enum: [0, 1]
+          description: "0: Firmante, 1: Aprobador"
+          default: 0
+        order_number:
+          type: integer
+          minimum: 1
+          default: 1
+          description: "Orden de firma (1, 2, 3...)"
+      required: [full_name, email, rut_id] # Se asume para simplicidad; la identificación real puede ser solo email o rut_id
+
+    # Archivo de documento
+    UploadFileB64Request:
+      type: object
+      properties:
+        document:
+          type: object
+          properties:
+            sContractID:
+              type: string
+              format: uuid
+              description: "ID del documento al que pertenece el archivo"
+              example: "550e8400-e29b-41d4-a716-446655440000"
+            file_content:
+              type: string
+              format: byte
+              description: "Contenido del PDF codificado en Base64"
+              example: "JVBERi0xLjQKJdPr6eEKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCgo..."
+          required: [sContractID, file_content]
+      required: [document]
+
+    DocumentFile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        document_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        file_name:
+          type: string
+          example: "documento_12345_original_1640995200000_abc123.pdf"
+        file_path:
+          type: string
+          example: "/uploads/doc-uuid/filename.pdf"
+        file_size:
+          type: integer
+          example: 1048576
+          description: "Tamaño del archivo en bytes"
+        file_type:
+          type: string
+          example: "PDF"
+        file_version:
+          type: string
+          enum: [original, signed, notary, extra] # Añadido 'extra'
+          example: "original"
+          description: |
+            Versión del archivo:
+            - `original`: Archivo subido inicialmente
+            - `signed`: Archivo con firmas aplicadas (manuscritas)
+            - `notary`: Archivo notariado con timestamp (por certificador)
+            - `extra`: Documento adjunto adicional
+        content_hash:
+          type: string
+          example: "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+          description: "Hash SHA-256 del contenido del archivo"
+        upload_date:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    DocumentFileMetadata:
+      type: object
+      properties:
+        contractID:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        document:
+          type: string
+          example: "documento_12345_original_1640995200000_abc123.pdf"
+        url:
+          type: string
+          format: url
+          example: "http://168.232.167.145:3000/api/v1/download/550e8400-e29b-41d4-a716-446655440000"
+        description:
+          type: string
+          example: "Documento original"
+        order:
+          type: integer
+          example: 1
+        file_size:
+          type: integer
+          example: 1048576
+        upload_date:
+          type: string
+          format: date-time
+
+    DownloadUrls:
+      type: object
+      properties:
+        url:
+          type: string
+          format: url
+          description: "URL del PDF original"
+          example: "http://168.232.167.145:3000/api/v1/download/550e8400-e29b-41d4-a716-446655440000?version=original"
+        url_signed:
+          type: string
+          format: url
+          nullable: true
+          description: "URL del PDF firmado por clientes (disponible después de las firmas manuscritas)"
+          example: "http://168.232.167.145:3000/api/v1/download/550e8400-e29b-41d4-a716-446655440000?version=signed"
+        url_log:
+          type: string
+          format: url
+          nullable: true
+          description: "URL del log de firmas en formato PDF o TXT"
+          example: "http://168.232.167.145:3000/api/v1/audit/550e8400-e29b-41d4-a716-446655440000/log"
+        url_notary:
+          type: string
+          format: url
+          nullable: true
+          description: "URL del PDF notariado/certificado con timestamp (firmado por certificador)"
+          example: "http://168.232.167.145:3000/api/v1/download/550e8400-e29b-41d4-a716-446655440000?version=notary"
+
+    # Notificación
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        document_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        recipient_email:
+          type: string
+          format: email
+          example: "firmante@example.com"
+        recipient_rut:
+          type: string
+          nullable: true
+          example: "12345678-9"
+        notification_type:
+          type: string
+          enum: [DRAFT_PRIORITY, REMINDER, STATUS_CHANGE, SIGNATURE_REQUEST, SIGNATURE_COMPLETED, DOCUMENT_CERTIFIED] # Añadidos tipos
+          example: "SIGNATURE_REQUEST"
+          description: |
+            Tipos de notificación:
+            - `DRAFT_PRIORITY`: Notificación inicial de documento listo para firmar
+            - `REMINDER`: Recordatorio de firma pendiente
+            - `STATUS_CHANGE`: Cambio en el estado del documento
+            - `SIGNATURE_REQUEST`: Solicitud específica de firma
+            - `SIGNATURE_COMPLETED`: Todas las firmas del documento completadas
+            - `DOCUMENT_CERTIFIED`: Documento finalizado y certificado
+        status:
+          type: string
+          enum: [PENDING, SENT, FAILED, DELIVERED, OPENED, CLICKED]
+          example: "SENT"
+          description: |
+            Estados de la notificación:
+            - `PENDING`: En cola para envío
+            - `SENT`: Enviada exitosamente
+            - `FAILED`: Error en el envío
+            - `DELIVERED`: Entregada al servidor de email
+            - `OPENED`: Email abierto por el destinatario
+            - `CLICKED`: Link del email clickeado
+        subject:
+          type: string
+          example: "Documento listo para tu firma - NotaryPro"
+        message:
+          type: string
+          example: "Tienes un documento esperando tu firma digital."
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        opened_at:
+          type: string
+          format: date-time
+          nullable: true
+        retry_count:
+          type: integer
+          example: 0
+          description: "Número de reintentos de envío"
+        error_message:
+          type: string
+          nullable: true
+          description: "Mensaje de error si el envío falló"
+        created_at:
+          type: string
+          format: date-time
+
+    SendNotificationRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [SIGNING_REQUEST, SIGNATURE_COMPLETED, DOCUMENT_CERTIFIED, REMINDER, DRAFT_PRIORITY]
+          description: Tipo de notificación a enviar.
+        document_id:
+          type: string
+          format: uuid
+          description: ID del documento asociado a la notificación.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        recipient_email:
+          type: string
+          format: email
+          description: Email del destinatario principal.
+          example: "destino@example.com"
+        recipient_rut:
+          type: string
+          nullable: true
+          description: RUT del destinatario si aplica.
+          example: "12345678-9"
+        template_data:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Datos adicionales para personalizar el email (ej. documentTitle, signingLink, trackingCode).
+          example:
+            documentTitle: "Contrato de Prueba"
+            trackingCode: "DOC12345"
+            signingLink: "https://app.notarypro.cl/sign/..."
+      required: [type, document_id, recipient_email]
+
+
+    # Registro de auditoría
+    AuditLog:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        document_title:
+          type: string
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              event_type:
+                type: string
+                enum: [CREATED, UPLOADED, SIGNER_ADDED, NOTIFICATION_SENT, SIGNATURE_APPLIED, COMPLETED, DOCUMENT_STATE_TRANSITION, HANDWRITTEN_SIGNATURE_APPLIED, CERTIFIER_SIGNED_UPLOADED, PAYMENT_COMPLETED] # Ampliados
+              description:
+                type: string
+              user_id:
+                type: string
+                format: uuid
+                nullable: true
+              user_email:
+                type: string
+                format: email
+                nullable: true
+              ip_address:
+                type: string
+                nullable: true
+              user_agent:
+                type: string
+                nullable: true
+              metadata:
+                type: object
+                additionalProperties: true
+              timestamp:
+                type: string
+                format: date-time
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Signer'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentFile'
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+
+    # Resultado de verificación
+    VerificationResult:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        is_valid:
+          type: boolean
+          example: true
+        verification_date:
+          type: string
+          format: date-time
+        original_hash:
+          type: string
+          description: "Hash del documento original"
+        current_hash:
+          type: string
+          description: "Hash actual del documento"
+        signatures:
+          type: array
+          items:
+            type: object
+            properties:
+              signer_email:
+                type: string
+                format: email
+              signer_name:
+                type: string
+              signature_date:
+                type: string
+                format: date-time
+              signature_hash:
+                type: string
+              is_valid:
+                type: boolean
+              certificate_info:
+                type: object
+                properties:
+                  issuer:
+                    type: string
+                  subject:
+                    type: string
+                  valid_from:
+                    type: string
+                    format: date-time
+                  valid_to:
+                    type: string
+                    format: date-time
+        tampering_detected:
+          type: boolean
+          example: false
+        integrity_score:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 100
+          description: "Puntuación de integridad del documento (0-100)"
+
+    # Token de recuperación de contraseña
+    PasswordResetToken:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        token:
+          type: string
+          description: "Código de 6 dígitos"
+          pattern: "^[0-9]{6}$"
+        expires_at:
+          type: string
+          format: date-time
+          description: "Fecha de expiración (15 minutos desde creación)"
+        used:
+          type: boolean
+          default: false
+        used_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # Respuesta de error estándar
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Descripción del error"
+        code:
+          type: string
+          example: "ERROR_CODE"
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+
+
+    # --- ESQUEMAS PARA CUPONES ---
+    Coupon:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        code:
+          type: string
+          example: "DESCUENTO20"
+        discount_value:
+          type: number
+          format: float
+          example: 20
+        discount_type:
+          type: string
+          enum: [percentage, fixed]
+          example: percentage
+        description:
+          type: string
+          nullable: true
+          example: "20% de descuento en todos los documentos"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-12-31T23:59:59Z"
+        max_uses:
+          type: integer
+          nullable: true
+          example: 100
+        current_uses:
+          type: integer
+          readOnly: true
+          example: 10
+        is_active:
+          type: boolean
+          example: true
+        document_types:
+          type: array
+          items:
+            type: string
+          example: ["all"]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [code, discount_value, discount_type]
+
+    CreateCouponRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "NUEVOCUPON"
+        discount_value:
+          type: number
+          format: float
+          example: 10
+        discount_type:
+          type: string
+          enum: [percentage, fixed]
+          example: fixed
+        description:
+          type: string
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        max_uses:
+          type: integer
+          nullable: true
+        document_types:
+          type: array
+          items:
+            type: string
+      required: [code, discount_value, discount_type]
+
+    ValidateCouponRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DESCUENTO20"
+        documentType:
+          type: string
+          nullable: true
+          example: "Contrato"
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+      required: [code]
+
+    ApplyCouponRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "DESCUENTO20"
+        documentId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+      required: [code, documentId]
+
+    # --- ESQUEMAS PARA PAGOS ---
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "p1a2b3c4-d5e6-7890-1234-567890abcdef"
+        user_id:
+          type: string
+          format: uuid
+          example: "u1a2b3c4-d5e6-7890-1234-567890abcdef"
+        document_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: "d1a2b3c4-d5e6-7890-1234-567890abcdef"
+        amount:
+          type: number
+          format: float
+          example: 25000.00
+        currency:
+          type: string
+          example: "CLP"
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+          example: "COMPLETED"
+        payment_method:
+          type: string
+          nullable: true
+          example: "Tarjeta de Crédito"
+        transaction_id:
+          type: string
+          nullable: true
+          example: "txn_xyz123abc"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [user_id, amount, status]
+
+    CreatePaymentRequest:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: ID del documento asociado al pago.
+          example: "d1a2b3c4-d5e6-7890-1234-567890abcdef"
+        amount:
+          type: number
+          format: float
+          description: Monto total del pago.
+          example: 25000.00
+        currency:
+          type: string
+          description: Moneda del pago (ej. CLP).
+          default: "CLP"
+          example: "CLP"
+      required: [document_id, amount]
+
+    ProcessPaymentRequest:
+      type: object
+      properties:
+        payment_method:
+          type: string
+          description: Método de pago utilizado (ej. "WebPay", "Transferencia").
+          example: "WebPay"
+        payment_details:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Detalles adicionales específicos de la pasarela de pago.
+          example:
+            card_last_four: "1234"
+            card_brand: "Visa"
+      required: [payment_method]
+    
+    # --- ESQUEMAS PARA IDENTIDAD (VALIDATION) ---
+    ValidateRutRequest:
+      type: object
+      properties:
+        rut:
+          type: string
+          pattern: "^[0-9]{7,8}-[0-9Kk]$"
+          example: "12345678-9"
+          description: RUT chileno a validar.
+      required: [rut]
+
+    SendOtpRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          pattern: "^\\+?[0-9]{8,15}$"
+          example: "+56912345678"
+          description: Número de teléfono para enviar el código OTP.
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID del usuario asociado a la solicitud (opcional).
+      required: [phone]
+
+    VerifyOtpRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          pattern: "^\\+?[0-9]{8,15}$"
+          example: "+56912345678"
+          description: Número de teléfono al que se envió el OTP.
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+          example: "123456"
+          description: Código OTP recibido.
+      required: [phone, code]
+
+    VerifyBiometricRequest:
+      type: object
+      properties:
+        biometricData:
+          type: object
+          additionalProperties: true
+          description: Datos biométricos para la verificación (ej. imágenes faciales, huellas).
+          example:
+            faceMatchScore: 0.95
+            livenessDetected: true
+            image_base64: "data:image/jpeg;base64,..."
+      required: [biometricData]
+
+    # --- ESQUEMAS PARA ANALYTICS ---
+    DashboardStats:
+      type: object
+      properties:
+        tramitesIngreso:
+          type: integer
+          example: 80
+          description: Número de trámites en estado inicial.
+        tramitesRevision:
+          type: integer
+          example: 50
+          description: Número de trámites en revisión.
+        tramitesFirmas:
+          type: integer
+          example: 20
+          description: Número de trámites pendientes de firma.
+        notariaEntrega:
+          type: integer
+          example: 15
+          description: Número de trámites notarizados o entregados.
+        tramitesPagos:
+          type: integer
+          example: 40
+          description: Número de trámites con pagos pendientes.
+        ingresosMensuales:
+          type: number
+          format: float
+          example: 2800000.00
+          description: Ingresos totales del mes en CLP.
+        conversionRate:
+          type: number
+          format: float
+          example: 85.2
+          description: Tasa de conversión (ej. de inicio a completado).
+        tiempoPromedioFirma:
+          type: string
+          example: "1.5 días"
+          description: Tiempo promedio para completar una firma.
+        usersCount:
+          type: integer
+          example: 120
+          description: Número total de usuarios registrados.
+        activeCoupons:
+          type: integer
+          example: 12
+          description: Número de cupones de descuento activos.
+        period:
+          type: string
+          example: "30d"
+          description: Periodo de tiempo de las estadísticas.
+      
+    UsageReport:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "2025-07-01 to 2025-07-31"
+          description: Periodo del reporte.
+        totalDocumentsCreated:
+          type: integer
+          example: 50
+        totalSignaturesCompleted:
+          type: integer
+          example: 120
+        totalPaymentsProcessed:
+          type: integer
+          example: 30
+        usersActive:
+          type: integer
+          example: 75
+        details:
+          type: string
+          example: "Reporte general de uso del sistema."
+
+    ConversionMetrics:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "30d"
+        draftToSignedConversion:
+          type: number
+          format: float
+          example: 75.8
+          description: Porcentaje de documentos que pasan de borrador a firmado.
+        leadToCustomerConversion:
+          type: number
+          format: float
+          example: 30.1
+          description: Porcentaje de leads que se convierten en clientes de pago.
+        averageSigningTime:
+          type: string
+          example: "1.2 days"
+          description: Tiempo promedio que toma una firma desde la solicitud.
+
+    # --- ESQUEMAS PARA PLANTILLAS ---
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        content_html:
+          type: string
+          description: Contenido HTML de la plantilla con placeholders (ej. `<p>Hola {{nombre}}</p>`).
+        fields_definition:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "nombre"
+              type:
+                type: string
+                enum: [text, number, date, checkbox]
+                example: "text"
+              required:
+                type: boolean
+                example: true
+          description: Lista de campos detectados/definidos en la plantilla para rellenar.
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [name, content_html]
+
+    CreateTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Contrato Tipo Básico"
+          description: Nombre único de la plantilla.
+        description:
+          type: string
+          nullable: true
+          example: "Plantilla para contratos de arriendo estándar."
+        content_html:
+          type: string
+          description: Contenido HTML de la plantilla con placeholders (ej. `<p>Hola {{nombre}}</p>`).
+          example: "<p>Este es un contrato para {{nombre_arrendatario}}.</p>"
+        fields_definition:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              type: { type: string, enum: [text, number, date, checkbox] }
+              required: { type: boolean }
+          nullable: true
+          description: Definición manual de campos de la plantilla. Si no se provee, se intentarán extraer de `content_html`.
+      required: [name, content_html]
+
+    UpdateTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        content_html:
+          type: string
+          nullable: true
+        fields_definition:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              type: { type: string, enum: [text, number, date, checkbox] }
+              required: { type: boolean }
+          nullable: true
+      minProperties: 1
+
+    UploadConvertTemplateRequest:
+      type: object
+      properties:
+        file_content_base64:
+          type: string
+          description: Contenido del archivo (DOCX, PDF, HTML) codificado en Base64.
+          example: "JVBERi0xLjQKJdPr6eEKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCgo..."
+        file_name:
+          type: string
+          description: Nombre del archivo original (ej. "contrato.docx").
+          example: "mi_plantilla.html"
+        template_name:
+          type: string
+          description: Nombre que se le dará a la nueva plantilla.
+          example: "Plantilla de Contrato General"
+        template_description:
+          type: string
+          nullable: true
+          description: Descripción opcional de la plantilla.
+      required: [file_content_base64, file_name, template_name]
+
+    # --- ESQUEMAS PARA FIRMAS ---
+    RequestSigningRequest:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: ID del documento a firmar.
+          example: "d1a2b3c4-d5e6-7890-1234-567890abcdef"
+        signer_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID del firmante específico (opcional, si no se envía a todos).
+          example: "s1a2b3c4-d5e6-7890-1234-567890abcdef"
+      required: [document_id]
+
+    ApplyHandwrittenSignatureRequest:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: ID del documento donde se aplicará la firma.
+          example: "d1a2b3c4-d5e6-7890-1234-567890abcdef"
+        signer_id:
+          type: string
+          format: uuid
+          description: ID del firmante que aplica la firma.
+          example: "s1a2b3c4-d5e6-7890-1234-567890abcdef"
+        signature_image_base64:
+          type: string
+          description: Imagen de la firma manuscrita en formato Base64 (ej. PNG).
+          example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+        x_coord:
+          type: integer
+          description: Coordenada X (horizontal) de la posición de la firma en la página (píxeles).
+          example: 100
+        y_coord:
+          type: integer
+          description: Coordenada Y (vertical) de la posición de la firma en la página (píxeles).
+          example: 200
+        page_number:
+          type: integer
+          minimum: 1
+          description: Número de página donde se aplicará la firma (base 1).
+          example: 1
+      required: [document_id, signer_id, signature_image_base64, x_coord, y_coord, page_number]
+
+    UploadCertifierSignedPdfRequest:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: ID del documento que ha sido firmado por el certificador.
+          example: "d1a2b3c4-d5e6-7890-1234-567890abcdef"
+        certifier_id:
+          type: string
+          format: uuid
+          description: ID del certificador que realizó la firma.
+          example: "c1a2b3c4-d5e6-7890-1234-567890abcdef"
+        signed_pdf_base64:
+          type: string
+          description: El documento PDF completo con la firma digital del certificador en Base64.
+          example: "JVBERi0xLjQKJdPr6eEKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCgo..."
+      required: [document_id, certifier_id, signed_pdf_base64]
+
+
+# =============================================================================
+# TAGS PARA ORGANIZACIÓN
+# =============================================================================
+tags:
+  - name: Sistema
+    description: |
+      Endpoints para verificar el estado del sistema y obtener información general.
+      
+      **Incluye:**
+      - Health check del servidor
+      - Información de versión y módulos activos
+  
+  - name: Autenticación
+    description: |
+      Sistema completo de autenticación y recuperación de contraseñas.
+      
+      **Funcionalidades:**
+      - ? Login con JWT
+      - ? Registro de usuarios
+      - ? Recuperación de contraseña por email
+      - ? Actualización de contraseña con código de 6 dígitos
+      
+      **Seguridad:**
+      - Tokens JWT con expiración de 24 horas
+      - Códigos de recuperación con expiración de 15 minutos
+      - Validación de email y contraseñas seguras
+
+  - name: Documentos
+    description: |
+      Gestión completa de documentos para firma electrónica.
+      
+      **Funcionalidades:**
+      - ? CRUD completo de documentos
+      - ? Estados de documento (draft, pending, signed, completed)
+      - ? Callback URLs para webhooks
+      - ? Metadatos personalizados
+      - ? Transición de estados de workflow
+
+  - name: Firmantes
+    description: |
+      Sistema avanzado de gestión de firmantes.
+      
+      **Funcionalidades:**
+      - ? Actualización por email o RUT
+      - ? Soporte para personas naturales y jurídicas
+      - ? Roles de firmante y aprobador
+      - ? Orden de firma secuencial
+      - ? Validación de RUT chileno
+      - ? Listado completo con filtros
+      
+      **Compatibilidad:** 100% compatible con FirmaVirtual API
+
+  - name: Archivos
+    description: |
+      Gestión completa de archivos PDF.
+      
+      **Funcionalidades:**
+      - ? Subida de archivos en Base64
+      - ? Múltiples versiones (original, firmado, notariado)
+      - ? Descarga directa con control de versiones
+      - ? URLs de descarga dinámicas
+      - ? Validación de integridad con hashes SHA-256
+      - ? Soporte para archivos hasta 50MB
+      
+      **Formatos:** Solo PDF (por seguridad)
+
+  - name: Notificaciones
+    description: |
+      Sistema automático de notificaciones por email.
+      
+      **Funcionalidades:**
+      - ? Notificaciones masivas a todos los firmantes
+      - ? Reenvío individual por RUT
+      - ? Envío de notificaciones genéricas (por tipo de evento)
+      - ? Estados de entrega y seguimiento
+      - ? Plantillas personalizadas
+      - ? Reintentos automáticos
+      - ? Tracking de apertura y clicks
+      
+      **Tipos de notificación:**
+      - DRAFT_PRIORITY: Documento listo para firmar
+      - REMINDER: Recordatorios automáticos
+      - STATUS_CHANGE: Cambios de estado
+      - SIGNATURE_REQUEST: Solicitudes específicas de firma
+      - SIGNATURE_COMPLETED: Todas las firmas del documento completadas
+      - DOCUMENT_CERTIFIED: Documento finalizado y certificado
+
+  - name: Auditoría
+    description: |
+      Sistema completo de auditoría y trazabilidad.
+      
+      **Funcionalidades:**
+      - ? Registro completo de eventos
+      - ? Tracking de IP y User-Agent
+      - ? Metadatos de cada acción
+      - ? Cronología detallada
+      - ? Exportación de logs
+
+  - name: Verificación
+    description: |
+      Verificación pública de integridad de documentos.
+      
+      **Funcionalidades:**
+      - ? Verificación sin autenticación
+      - ? Validación de firmas digitales
+      - ? Detección de alteraciones
+      - ? Puntuación de integridad
+      - ? Información de certificados
+
+  - name: Usuarios
+    description: |
+      **?? MÓDULO DE USUARIOS** - Gestión de usuarios y roles del sistema.
+      
+      **Funcionalidades:**
+      - ? Creación y listado de usuarios (clientes, administradores, notarios, etc.)
+      - ? Actualización de perfiles y roles
+      - ? Eliminación de usuarios
+      - ? Consulta de actividad de usuario
+      - ? Roles definidos (admin, gestor, certificador, operador, cliente, validador)
+
+  - name: Cupones
+    description: |
+      **?? MÓDULO DE CUPONES** - Sistema de gestión de descuentos y promociones.
+      
+      **Funcionalidades:**
+      - ? Creación y listado de cupones
+      - ? Validación de cupones
+      - ? Aplicación de cupones a documentos/pagos
+      - ? Seguimiento de usos y caducidad
+      - ? Tipos de descuento (porcentaje, fijo)
+
+  - name: Pagos
+    description: |
+      **?? MÓDULO DE PAGOS** - Gestión de transacciones financieras.
+      
+      **Funcionalidades:**
+      - ? Creación de pagos pendientes
+      - ? Procesamiento de pagos con diferentes métodos
+      - ? Historial de pagos
+      - ? Generación de facturas
+      - ? Integración con pasarelas de pago (simulado, requiere implementación real)
+
+  - name: Identidad
+    description: |
+      **?? MÓDULO DE IDENTIDAD** - Herramientas avanzadas para la verificación de identidad.
+      
+      **Funcionalidades:**
+      - ? Validación de formato de RUT chileno
+      - ? Envío y verificación de códigos OTP (One-Time Password) por SMS/WhatsApp (requiere proveedor externo)
+      - ? Verificación biométrica (simulado, requiere proveedor externo)
+
+  - name: Analytics
+    description: |
+      **?? MÓDULO DE ANALYTICS** - Reportes y métricas de rendimiento del sistema.
+      
+      **Funcionalidades:**
+      - ? Estadísticas clave del dashboard
+      - ? Reportes de uso
+      - ? Métricas de conversión (ej. documentos completados vs. iniciados)
+      - ? Filtros por rango de tiempo y usuario
+
+# =============================================================================
+# INFORMACIÓN ADICIONAL
+# =============================================================================
+externalDocs:
+  description: |
+    **NotaryPro - Documentación Completa**
+    
+    ?? **Estado Actual:** ¡Ahora con todos los módulos principales implementados!
+    
+    ?? **Módulos Implementados:**
+    - ? Core System (Documentos, Usuarios, Auth)
+    - ? Firmantes (Gestión completa)
+    - ? Archivos PDF (Base64, descarga, versiones)
+    - ? Notificaciones (Email automático)
+    - ? Recuperación de contraseñas
+    - ? Auditoría completa
+    - ? Verificación pública
+    - ? Usuarios (CRUD, Roles, Actividad)
+    - ? Cupones (Creación, Validación, Aplicación)
+    - ? Pagos (Creación, Procesamiento, Historial)
+    - ? Identidad (RUT, OTP, Biometría)
+    - ? Analytics (Dashboard, Reportes, Conversión)
+    - ? Plantillas (Gestión, Creación desde plantillas, Carga y Conversión de archivos)
+    - ? **Firma Manuscrita de Clientes**
+    - ? **Firma de Certificadores (Subida de PDF firmado localmente)**
+    
+    ?? **Pendientes:**
+    - Integración Real de Pasarelas de Pago
+    - Integración Real de Proveedores de OTP/SMS/Biometría
+    - TSA (Timestamp Authority)
+    - Herramientas PDF avanzadas
+    - Integración Clave Única (con backend proxy si es necesario)
+    
+    ?? **Servidor de Producción:** http://168.232.167.145:3000
+    
+    ?? **Configuración requerida:** Variables SMTP en .env para notificaciones
+  url: https://docs.notarypro.cl

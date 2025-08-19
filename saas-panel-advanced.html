@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaryPro SAAS - Panel Administrativo Avanzado</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- DataTables -->
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --accent-color: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            z-index: 1000;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+        }
+
+        .nav-link {
+            color: var(--dark-color);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin: 5px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .btn-primary-custom {
+            background: var(--primary-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary-custom:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-suspended { background: #fee2e2; color: #991b1b; }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .quick-action-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .quick-action-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        .quick-action-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="p-4">
+            <div class="d-flex align-items-center mb-4">
+                <i class="fas fa-stamp fa-2x text-primary me-3"></i>
+                <h4 class="mb-0 fw-bold">NotaryPro</h4>
+            </div>
+            
+            <nav class="nav flex-column">
+                <a class="nav-link active" href="#dashboard">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+                <a class="nav-link" href="#users">
+                    <i class="fas fa-users me-2"></i>Usuarios
+                </a>
+                <a class="nav-link" href="#organizations">
+                    <i class="fas fa-building me-2"></i>Organizaciones
+                </a>
+                <a class="nav-link" href="#billing">
+                    <i class="fas fa-credit-card me-2"></i>Facturación
+                </a>
+                <a class="nav-link" href="#analytics">
+                    <i class="fas fa-chart-line me-2"></i>Analytics
+                </a>
+                <a class="nav-link" href="#settings">
+                    <i class="fas fa-cog me-2"></i>Configuración
+                </a>
+                <a class="nav-link" href="#support">
+                    <i class="fas fa-headset me-2"></i>Soporte
+                </a>
+            </nav>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 text-white mb-1">Panel Administrativo SAAS</h1>
+                <p class="text-white-50 mb-0">Gestión completa de la plataforma NotaryPro</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="position-relative">
+                    <button class="btn btn-light" onclick="showNotifications()">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                </div>
+                <div class="user-avatar">
+                    <span>A</span>
+                </div>
+                <div class="text-white">
+                    <div class="fw-bold">Admin</div>
+                    <small class="text-white-50">admin@notarypro.cl</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="quick-action-card" onclick="quickAction('create-org')">
+                <div class="quick-action-icon">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <h6>Nueva Organización</h6>
+                <small class="text-muted">Crear empresa cliente</small>
+            </div>
+            <div class="quick-action-card" onclick="quickAction('add-user')">
+                <div class="quick-action-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <h6>Agregar Usuario</h6>
+                <small class="text-muted">Nuevo usuario al sistema</small>
+            </div>
+            <div class="quick-action-card" onclick="quickAction('generate-report')">
+                <div class="quick-action-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <h6>Generar Reporte</h6>
+                <small class="text-muted">Reporte de métricas</small>
+            </div>
+            <div class="quick-action-card" onclick="quickAction('system-health')">
+                <div class="quick-action-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h6>Salud del Sistema</h6>
+                <small class="text-muted">Estado de servicios</small>
+            </div>
+        </div>
+
+        <!-- Metrics Dashboard -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card">
+                    <div class="metric-icon" style="background: var(--primary-color);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="metric-value" id="totalUsers">1,247</div>
+                    <p class="text-muted mb-0">Usuarios Activos</p>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up"></i> +12% este mes
+                    </small>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card">
+                    <div class="metric-icon" style="background: var(--success-color);">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="metric-value" id="totalOrgs">89</div>
+                    <p class="text-muted mb-0">Organizaciones</p>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up"></i> +5% este mes
+                    </small>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card">
+                    <div class="metric-icon" style="background: var(--warning-color);">
+                        <i class="fas fa-file-signature"></i>
+                    </div>
+                    <div class="metric-value" id="totalDocs">15,892</div>
+                    <p class="text-muted mb-0">Documentos Procesados</p>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up"></i> +23% este mes
+                    </small>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card">
+                    <div class="metric-icon" style="background: var(--danger-color);">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="metric-value" id="monthlyRevenue">$45.2K</div>
+                    <p class="text-muted mb-0">Ingresos Mensuales</p>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up"></i> +18% este mes
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Crecimiento de Usuarios
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="usersChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>Distribución por Plan
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="plansChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Quick Stats -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clock me-2"></i>Actividad Reciente
+                        </h5>
+                        <button class="btn btn-sm btn-outline-primary">Ver Todo</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Acción</th>
+                                        <th>Organización</th>
+                                        <th>Hora</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTable">
+                                    <!-- Activity rows will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tasks me-2"></i>Tareas Pendientes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="user-avatar" style="width: 35px; height: 35px;">
+                                    <span>J</span>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-1">Revisar solicitud Juan Pérez</h6>
+                                <small class="text-muted">Nueva organización</small>
+                            </div>
+                            <span class="badge bg-warning">Pendiente</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="user-avatar" style="width: 35px; height: 35px;">
+                                    <span>M</span>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-1">Actualizar plan María González</h6>
+                                <small class="text-muted">Upgrade a Premium</small>
+                            </div>
+                            <span class="badge bg-info">En Proceso</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="user-avatar" style="width: 35px; height: 35px;">
+                                    <span>C</span>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-1">Soporte técnico Carlos Ruiz</h6>
+                                <small class="text-muted">Problema de firma</small>
+                            </div>
+                            <span class="badge bg-danger">Urgente</span>
+                        </div>
+                        <button class="btn btn-primary-custom w-100 mt-3">
+                            Ver Todas las Tareas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="createOrgModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Crear Nueva Organización</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createOrgForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre de la Organización</label>
+                                <input type="text" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">RUT</label>
+                                <input type="text" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email de Contacto</label>
+                                <input type="email" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Plan</label>
+                                <select class="form-select" required>
+                                    <option value="">Seleccionar plan</option>
+                                    <option value="basic">Básico</option>
+                                    <option value="professional">Profesional</option>
+                                    <option value="enterprise">Empresarial</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Usuario Administrador</label>
+                                <input type="email" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <textarea class="form-control" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary-custom" onclick="createOrganization()">Crear Organización</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Initialize charts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadActivityData();
+            loadMetrics();
+        });
+
+        // Initialize Charts
+        function initializeCharts() {
+            // Users Growth Chart
+            const usersCtx = document.getElementById('usersChart').getContext('2d');
+            new Chart(usersCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Usuarios Activos',
+                        data: [850, 920, 1050, 1120, 1247, 1350],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Plans Distribution Chart
+            const plansCtx = document.getElementById('plansChart').getContext('2d');
+            new Chart(plansCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Básico', 'Profesional', 'Empresarial'],
+                    datasets: [{
+                        data: [45, 35, 20],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load Activity Data
+        function loadActivityData() {
+            const activities = [
+                {
+                    user: 'Juan Pérez',
+                    action: 'Creó documento',
+                    org: 'Abogados Asociados',
+                    time: 'Hace 5 min',
+                    status: 'Completado'
+                },
+                {
+                    user: 'María González',
+                    action: 'Firmó contrato',
+                    org: 'Consultora Legal',
+                    time: 'Hace 15 min',
+                    status: 'Completado'
+                },
+                {
+                    user: 'Carlos Ruiz',
+                    action: 'Subió archivo',
+                    org: 'Estudio Jurídico',
+                    time: 'Hace 30 min',
+                    status: 'En Proceso'
+                },
+                {
+                    user: 'Ana Silva',
+                    action: 'Verificó identidad',
+                    org: 'Notaría Central',
+                    time: 'Hace 1 hora',
+                    status: 'Completado'
+                }
+            ];
+
+            const tbody = document.getElementById('activityTable');
+            tbody.innerHTML = activities.map(activity => `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-2" style="width: 30px; height: 30px;">
+                                <span>${activity.user.charAt(0)}</span>
+                            </div>
+                            ${activity.user}
+                        </div>
+                    </td>
+                    <td>${activity.action}</td>
+                    <td>${activity.org}</td>
+                    <td>${activity.time}</td>
+                    <td>
+                        <span class="status-badge ${activity.status === 'Completado' ? 'status-active' : 'status-pending'}">
+                            ${activity.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Metrics
+        function loadMetrics() {
+            // Simulate real-time updates
+            setInterval(() => {
+                document.getElementById('totalUsers').textContent = Math.floor(Math.random() * 200 + 1200);
+                document.getElementById('totalDocs').textContent = Math.floor(Math.random() * 1000 + 15000);
+            }, 5000);
+        }
+
+        // Quick Actions
+        function quickAction(action) {
+            switch(action) {
+                case 'create-org':
+                    new bootstrap.Modal(document.getElementById('createOrgModal')).show();
+                    break;
+                case 'add-user':
+                    alert('Función de agregar usuario en desarrollo');
+                    break;
+                case 'generate-report':
+                    alert('Generando reporte...');
+                    break;
+                case 'system-health':
+                    checkSystemHealth();
+                    break;
+            }
+        }
+
+        // Create Organization
+        function createOrganization() {
+            const form = document.getElementById('createOrgForm');
+            if (form.checkValidity()) {
+                alert('Organización creada exitosamente');
+                bootstrap.Modal.getInstance(document.getElementById('createOrgModal')).hide();
+                form.reset();
+            } else {
+                form.reportValidity();
+            }
+        }
+
+        // Check System Health
+        function checkSystemHealth() {
+            const services = [
+                { name: 'API Principal', status: 'Operativo', color: 'success' },
+                { name: 'Base de Datos', status: 'Operativo', color: 'success' },
+                { name: 'Servicio de Firmas', status: 'Operativo', color: 'success' },
+                { name: 'Sistema de Notificaciones', status: 'Operativo', color: 'success' }
+            ];
+
+            let message = 'Estado del Sistema:\n\n';
+            services.forEach(service => {
+                message += `✅ ${service.name}: ${service.status}\n`;
+            });
+
+            alert(message);
+        }
+
+        // Show Notifications
+        function showNotifications() {
+            const notifications = [
+                'Nueva solicitud de organización pendiente',
+                'Usuario reportó problema técnico',
+                'Plan de suscripción próximo a vencer'
+            ];
+
+            let message = 'Notificaciones:\n\n';
+            notifications.forEach((notification, index) => {
+                message += `${index + 1}. ${notification}\n`;
+            });
+
+            alert(message);
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                this.classList.add('active');
+                
+                // Handle navigation (you can implement actual page switching here)
+                const section = this.getAttribute('href').substring(1);
+                console.log(`Navigating to: ${section}`);
+            });
+        });
+    </script>
+</body>
+</html>

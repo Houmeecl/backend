@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaryPro SaaS Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Sidebar -->
+    <div class="fixed inset-y-0 left-0 w-64 bg-blue-800 text-white">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold">NotaryPro SaaS</h1>
+            <p class="text-blue-200 text-sm">Panel de Administración</p>
+        </div>
+        
+        <nav class="mt-8">
+            <a href="#dashboard" class="flex items-center px-6 py-3 text-blue-100 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                Dashboard
+            </a>
+            <a href="#users" class="flex items-center px-6 py-3 text-blue-100 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-users mr-3"></i>
+                Usuarios
+            </a>
+            <a href="#roles" class="flex items-center px-6 py-3 text-blue-100 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-user-tag mr-3"></i>
+                Roles
+            </a>
+            <a href="#subscriptions" class="flex items-center px-6 py-3 text-blue-100 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-credit-card mr-3"></i>
+                Suscripciones
+            </a>
+            <a href="#analytics" class="flex items-center px-6 py-3 text-blue-100 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-chart-bar mr-3"></i>
+                Analíticas
+            </a>
+            <a href="#billing" class="flex items-center px-6 py-3 text-blue-100 hover:bg-blue-700 transition-colors">
+                <i class="fas fa-file-invoice-dollar mr-3"></i>
+                Facturación
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64 p-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-800">Dashboard SaaS</h2>
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-600">Admin User</span>
+                <button class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="space-y-6">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-blue-500 rounded-full">
+                            <i class="fas fa-users text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-gray-500 text-sm">Total Usuarios</h3>
+                            <p class="text-2xl font-bold text-gray-800" id="total-users">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-green-500 rounded-full">
+                            <i class="fas fa-credit-card text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-gray-500 text-sm">Suscripciones Activas</h3>
+                            <p class="text-2xl font-bold text-gray-800" id="active-subscriptions">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-yellow-500 rounded-full">
+                            <i class="fas fa-chart-line text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-gray-500 text-sm">API Requests Hoy</h3>
+                            <p class="text-2xl font-bold text-gray-800" id="api-requests-today">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-purple-500 rounded-full">
+                            <i class="fas fa-dollar-sign text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-gray-500 text-sm">Ingresos del Mes</h3>
+                            <p class="text-2xl font-bold text-gray-800" id="monthly-revenue">$0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Uso de API (Últimos 30 días)</h3>
+                    <canvas id="api-usage-chart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Distribución de Planes</h3>
+                    <canvas id="plans-chart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div id="users" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Gestión de Usuarios</h3>
+                    <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors" onclick="showCreateUserModal()">
+                        <i class="fas fa-plus mr-2"></i>
+                        Nuevo Usuario
+                    </button>
+                </div>
+
+                <!-- Users Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Roles Section -->
+        <div id="roles" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Gestión de Roles</h3>
+                    <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors" onclick="showCreateRoleModal()">
+                        <i class="fas fa-plus mr-2"></i>
+                        Nuevo Rol
+                    </button>
+                </div>
+
+                <!-- Roles Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permisos</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roles-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Roles will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Analíticas Detalladas</h3>
+                
+                <!-- Time Range Selector -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rango de Tiempo</label>
+                    <select id="time-range" class="border border-gray-300 rounded-md px-3 py-2" onchange="loadAnalytics()">
+                        <option value="7d">Últimos 7 días</option>
+                        <option value="30d" selected>Últimos 30 días</option>
+                        <option value="90d">Últimos 90 días</option>
+                        <option value="1y">Último año</option>
+                    </select>
+                </div>
+
+                <!-- Analytics Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-md font-medium text-gray-700 mb-3">Uso de API por Endpoint</h4>
+                        <canvas id="endpoint-usage-chart" width="400" height="300"></canvas>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-md font-medium text-gray-700 mb-3">Tiempo de Respuesta Promedio</h4>
+                        <canvas id="response-time-chart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Create User Modal -->
+    <div id="create-user-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Crear Nuevo Usuario</h3>
+                
+                <form id="create-user-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" name="email" required class="w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" name="password" required class="w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                            <input type="text" name="first_name" required class="w-full border border-gray-300 rounded-md px-3 py-2">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                            <input type="text" name="last_name" required class="w-full border border-gray-300 rounded-md px-3 py-2">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Plan de Suscripción</label>
+                        <select name="subscription_plan" class="w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="free">Free</option>
+                            <option value="basic">Basic</option>
+                            <option value="premium">Premium</option>
+                            <option value="enterprise">Enterprise</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+                        <select name="role" class="w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="user">User</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="hideCreateUserModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            Crear Usuario
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Role Modal -->
+    <div id="create-role-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Crear Nuevo Rol</h3>
+                
+                <form id="create-role-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Rol</label>
+                        <input type="text" name="name" required class="w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                        <textarea name="description" rows="3" class="w-full border border-gray-300 rounded-md px-3 py-2"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Permisos</label>
+                        <div class="space-y-2 max-h-40 overflow-y-auto">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions" value="users:read" class="mr-2">
+                                <span class="text-sm">Leer usuarios</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions" value="users:create" class="mr-2">
+                                <span class="text-sm">Crear usuarios</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions" value="users:update" class="mr-2">
+                                <span class="text-sm">Actualizar usuarios</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions" value="users:delete" class="mr-2">
+                                <span class="text-sm">Eliminar usuarios</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions" value="analytics:read" class="mr-2">
+                                <span class="text-sm">Ver analíticas</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="hideCreateRoleModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            Crear Rol
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:3000/api/v1';
+        let authToken = localStorage.getItem('authToken');
+
+        // Navigation
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                showSection(targetId);
+            });
+        });
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('#dashboard, #users, #roles, #subscriptions, #analytics, #billing').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show target section
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Load section data
+            switch(sectionId) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'roles':
+                    loadRoles();
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+            }
+        }
+
+        // Dashboard Functions
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/saas/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateDashboardStats(data.data);
+                    createDashboardCharts(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function updateDashboardStats(stats) {
+            document.getElementById('total-users').textContent = stats.total_users;
+            document.getElementById('active-subscriptions').textContent = stats.active_subscriptions;
+            document.getElementById('api-requests-today').textContent = stats.api_requests_today;
+            document.getElementById('monthly-revenue').textContent = `$${stats.revenue_month.toLocaleString()}`;
+        }
+
+        function createDashboardCharts(data) {
+            // API Usage Chart
+            const apiCtx = document.getElementById('api-usage-chart').getContext('2d');
+            new Chart(apiCtx, {
+                type: 'line',
+                data: {
+                    labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'],
+                    datasets: [{
+                        label: 'API Requests',
+                        data: Array.from({length: 30}, () => Math.floor(Math.random() * 1000)),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Plans Distribution Chart
+            const plansCtx = document.getElementById('plans-chart').getContext('2d');
+            new Chart(plansCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Free', 'Basic', 'Premium', 'Enterprise'],
+                    datasets: [{
+                        data: [30, 25, 35, 10],
+                        backgroundColor: [
+                            'rgb(156, 163, 175)',
+                            'rgb(59, 130, 246)',
+                            'rgb(245, 158, 11)',
+                            'rgb(139, 92, 246)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        }
+
+        // Users Functions
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/saas/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderUsersTable(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                                    <span class="text-white font-medium">${user.first_name[0]}${user.last_name[0]}</span>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${user.first_name} ${user.last_name}</div>
+                                <div class="text-sm text-gray-500">${user.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            ${user.subscription_plan}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${user.role}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${user.is_active ? 'Activo' : 'Inactivo'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editUser('${user.id}')">Editar</button>
+                        <button class="text-red-600 hover:text-red-900" onclick="deleteUser('${user.id}')">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Roles Functions
+        async function loadRoles() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/saas/roles`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderRolesTable(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading roles:', error);
+            }
+        }
+
+        function renderRolesTable(roles) {
+            const tbody = document.getElementById('roles-table-body');
+            tbody.innerHTML = '';
+
+            roles.forEach(role => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${role.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${role.description || 'Sin descripción'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex flex-wrap gap-1">
+                            ${role.permissions.map(perm => 
+                                `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">${perm}</span>`
+                            ).join('')}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editRole('${role.id}')">Editar</button>
+                        ${!role.is_system ? `<button class="text-red-600 hover:text-red-900" onclick="deleteRole('${role.id}')">Eliminar</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Analytics Functions
+        async function loadAnalytics() {
+            try {
+                const timeRange = document.getElementById('time-range').value;
+                const response = await fetch(`${API_BASE_URL}/saas/analytics?range=${timeRange}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    createAnalyticsCharts(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        function createAnalyticsCharts(data) {
+            // Endpoint Usage Chart
+            const endpointCtx = document.getElementById('endpoint-usage-chart').getContext('2d');
+            new Chart(endpointCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['/auth/login', '/documents', '/templates', '/signatures', '/users'],
+                    datasets: [{
+                        label: 'Requests',
+                        data: [1200, 800, 600, 400, 200],
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Response Time Chart
+            const responseCtx = document.getElementById('response-time-chart').getContext('2d');
+            new Chart(responseCtx, {
+                type: 'line',
+                data: {
+                    labels: ['1', '2', '3', '4', '5', '6', '7'],
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: [150, 120, 180, 90, 200, 110, 160],
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Modal Functions
+        function showCreateUserModal() {
+            document.getElementById('create-user-modal').classList.remove('hidden');
+        }
+
+        function hideCreateUserModal() {
+            document.getElementById('create-user-modal').classList.add('hidden');
+        }
+
+        function showCreateRoleModal() {
+            document.getElementById('create-role-modal').classList.remove('hidden');
+        }
+
+        function hideCreateRoleModal() {
+            document.getElementById('create-role-modal').classList.add('hidden');
+        }
+
+        // Form Submissions
+        document.getElementById('create-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const userData = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/saas/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    hideCreateUserModal();
+                    loadUsers();
+                    e.target.reset();
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+            }
+        });
+
+        document.getElementById('create-role-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const roleData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                permissions: Array.from(formData.getAll('permissions'))
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/saas/roles`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(roleData)
+                });
+
+                if (response.ok) {
+                    hideCreateRoleModal();
+                    loadRoles();
+                    e.target.reset();
+                }
+            } catch (error) {
+                console.error('Error creating role:', error);
+            }
+        });
+
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>
