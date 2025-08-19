@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaryPro - Documentación API Completa & Playground</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+    <!-- Swagger UI -->
+    <link href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --accent-color: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+            --code-bg: #1e1e1e;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 320px;
+            z-index: 1000;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 320px;
+            padding: 20px;
+        }
+
+        .nav-link {
+            color: var(--dark-color);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 2px 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+            transform: translateX(3px);
+        }
+
+        .nav-section {
+            margin: 20px 0;
+        }
+
+        .nav-section-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 15px 15px 10px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .endpoint-card {
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .endpoint-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .method-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .method-get { background: #dcfce7; color: #166534; }
+        .method-post { background: #dbeafe; color: #1e40af; }
+        .method-put { background: #fef3c7; color: #92400e; }
+        .method-delete { background: #fee2e2; color: #991b1b; }
+
+        .endpoint-path {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            color: #e5e7eb;
+        }
+
+        .playground-container {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .response-container {
+            background: #1f2937;
+            color: #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        .tab-content {
+            padding: 20px 0;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            border-radius: 8px 8px 0 0;
+            margin: 0 5px;
+            color: #6b7280;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .search-box {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 25px;
+            padding: 10px 20px;
+            margin: 15px;
+            width: calc(100% - 30px);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-online { background: var(--success-color); }
+        .status-offline { background: var(--danger-color); }
+        .status-warning { background: var(--warning-color); }
+
+        .api-version {
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .endpoint-description {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin: 8px 0;
+        }
+
+        .parameter-table {
+            font-size: 0.85rem;
+        }
+
+        .parameter-table th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        .example-request {
+            background: #f3f4f6;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .example-response {
+            background: #1f2937;
+            color: #e5e7eb;
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .playground-form {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .response-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-200 { background: #dcfce7; color: #166534; }
+        .status-400 { background: #fee2e2; color: #991b1b; }
+        .status-401 { background: #fef3c7; color: #92400e; }
+        .status-500 { background: #fee2e2; color: #991b1b; }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="p-4">
+            <div class="d-flex align-items-center mb-4">
+                <i class="fas fa-code fa-2x text-primary me-3"></i>
+                <div>
+                    <h4 class="mb-0 fw-bold">API Docs</h4>
+                    <span class="api-version">v2.2.0</span>
+                </div>
+            </div>
+            
+            <!-- Search -->
+            <input type="text" class="search-box" placeholder="🔍 Buscar endpoint..." id="searchEndpoints">
+            
+            <!-- Navigation -->
+            <nav class="nav flex-column">
+                <div class="nav-section">
+                    <div class="nav-section-title">Información General</div>
+                    <a class="nav-link active" href="#overview">
+                        <i class="fas fa-info-circle me-2"></i>Visión General
+                    </a>
+                    <a class="nav-link" href="#authentication">
+                        <i class="fas fa-key me-2"></i>Autenticación
+                    </a>
+                    <a class="nav-link" href="#errors">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Manejo de Errores
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Endpoints Principales</div>
+                    <a class="nav-link" href="#auth">
+                        <i class="fas fa-user-shield me-2"></i>Autenticación
+                    </a>
+                    <a class="nav-link" href="#users">
+                        <i class="fas fa-users me-2"></i>Usuarios
+                    </a>
+                    <a class="nav-link" href="#documents">
+                        <i class="fas fa-file-alt me-2"></i>Documentos
+                    </a>
+                    <a class="nav-link" href="#signatures">
+                        <i class="fas fa-signature me-2"></i>Firmas
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Módulos Avanzados</div>
+                    <a class="nav-link" href="#identity">
+                        <i class="fas fa-id-card me-2"></i>Identidad
+                    </a>
+                    <a class="nav-link" href="#payments">
+                        <i class="fas fa-credit-card me-2"></i>Pagos
+                    </a>
+                    <a class="nav-link" href="#analytics">
+                        <i class="fas fa-chart-line me-2"></i>Analytics
+                    </a>
+                    <a class="nav-link" href="#notifications">
+                        <i class="fas fa-bell me-2"></i>Notificaciones
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Herramientas</div>
+                    <a class="nav-link" href="#playground">
+                        <i class="fas fa-play me-2"></i>API Playground
+                    </a>
+                    <a class="nav-link" href="#sdk">
+                        <i class="fas fa-download me-2"></i>SDKs & Librerías
+                    </a>
+                    <a class="nav-link" href="#examples">
+                        <i class="fas fa-code me-2"></i>Ejemplos de Código
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 text-white mb-1">Documentación API Completa</h1>
+                <p class="text-white-50 mb-0">NotaryPro API v2.2.0 - Guía completa para desarrolladores</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center">
+                    <span class="status-indicator status-online"></span>
+                    <span class="text-white">API Online</span>
+                </div>
+                <div class="text-white">
+                    <small class="text-white-50">Base URL:</small><br>
+                    <code class="text-white">https://api.notarypro.cl/v1</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Tabs -->
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs" id="apiTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                            <i class="fas fa-info-circle me-2"></i>Visión General
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="endpoints-tab" data-bs-toggle="tab" data-bs-target="#endpoints" type="button" role="tab">
+                            <i class="fas fa-list me-2"></i>Endpoints
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="playground-tab" data-bs-toggle="tab" data-bs-target="#playground" type="button" role="tab">
+                            <i class="fas fa-play me-2"></i>Playground
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="examples-tab" data-bs-toggle="tab" data-bs-target="#examples" type="button" role="tab">
+                            <i class="fas fa-code me-2"></i>Ejemplos
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="tab-content" id="apiTabsContent">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <h4>Bienvenido a la API de NotaryPro</h4>
+                                <p class="lead">NotaryPro es una plataforma completa de firma electrónica y notarización digital que permite a los desarrolladores integrar capacidades de firma legal en sus aplicaciones.</p>
+                                
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-lightbulb me-2"></i>Características Principales</h6>
+                                    <ul class="mb-0">
+                                        <li><strong>Firma Electrónica Avanzada:</strong> Cumple con estándares legales chilenos</li>
+                                        <li><strong>Verificación de Identidad:</strong> Múltiples métodos de autenticación</li>
+                                        <li><strong>Gestión de Documentos:</strong> Subida, procesamiento y almacenamiento seguro</li>
+                                        <li><strong>Auditoría Completa:</strong> Trazabilidad de todas las operaciones</li>
+                                    </ul>
+                                </div>
+
+                                <h5 class="mt-4">Autenticación</h5>
+                                <p>La API utiliza JWT (JSON Web Tokens) para la autenticación. Incluye el token en el header de todas las peticiones:</p>
+                                <div class="code-block">
+                                    <pre><code>Authorization: Bearer YOUR_JWT_TOKEN</code></pre>
+                                </div>
+
+                                <h5 class="mt-4">Rate Limiting</h5>
+                                <p>Para mantener la estabilidad del servicio, aplicamos límites de velocidad:</p>
+                                <ul>
+                                    <li><strong>Plan Gratuito:</strong> 100 requests/hora</li>
+                                    <li><strong>Plan Profesional:</strong> 1,000 requests/hora</li>
+                                    <li><strong>Plan Empresarial:</strong> 10,000 requests/hora</li>
+                                </ul>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Estadísticas de la API</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Endpoints Disponibles:</span>
+                                            <strong>47</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Métodos HTTP:</span>
+                                            <strong>4</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Formatos Soportados:</span>
+                                            <strong>JSON</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Versión Actual:</span>
+                                            <strong>2.2.0</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span>Uptime:</span>
+                                            <strong class="text-success">99.9%</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-download me-2"></i>Descargas</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <a href="#" class="btn btn-primary-custom btn-sm w-100 mb-2">
+                                            <i class="fas fa-download me-2"></i>OpenAPI Spec
+                                        </a>
+                                        <a href="#" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                                            <i class="fas fa-file-pdf me-2"></i>PDF Manual
+                                        </a>
+                                        <a href="#" class="btn btn-outline-primary btn-sm w-100">
+                                            <i class="fas fa-code me-2"></i>Postman Collection
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Endpoints Tab -->
+                <div class="tab-pane fade" id="endpoints" role="tabpanel">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h4>Endpoints de la API</h4>
+                            <p>Explora todos los endpoints disponibles organizados por módulo.</p>
+                        </div>
+
+                        <!-- Authentication Endpoints -->
+                        <div class="endpoint-card card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-user-shield me-2"></i>Autenticación</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-post me-2">POST</span>
+                                        <span class="endpoint-path">/auth/login</span>
+                                    </div>
+                                    <p class="endpoint-description">Inicia sesión con email y contraseña para obtener un token JWT.</p>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Parámetros:</h6>
+                                            <table class="table table-sm parameter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Campo</th>
+                                                        <th>Tipo</th>
+                                                        <th>Requerido</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>email</td>
+                                                        <td>string</td>
+                                                        <td>Sí</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>password</td>
+                                                        <td>string</td>
+                                                        <td>Sí</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Respuesta:</h6>
+                                            <div class="example-response">
+                                                <pre><code>{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "role": "user"
+  }
+}</code></pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-post me-2">POST</span>
+                                        <span class="endpoint-path">/auth/register</span>
+                                    </div>
+                                    <p class="endpoint-description">Registra un nuevo usuario en el sistema.</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-post me-2">POST</span>
+                                        <span class="endpoint-path">/auth/refresh</span>
+                                    </div>
+                                    <p class="endpoint-description">Renueva un token JWT expirado.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Documents Endpoints -->
+                        <div class="endpoint-card card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-file-alt me-2"></i>Documentos</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-post me-2">POST</span>
+                                        <span class="endpoint-path">/documents/upload</span>
+                                    </div>
+                                    <p class="endpoint-description">Sube un nuevo documento para procesamiento.</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-get me-2">GET</span>
+                                        <span class="endpoint-path">/documents/{id}</span>
+                                    </div>
+                                    <p class="endpoint-description">Obtiene información detallada de un documento.</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-put me-2">PUT</span>
+                                        <span class="endpoint-path">/documents/{id}/sign</span>
+                                    </div>
+                                    <p class="endpoint-description">Firma un documento con la identidad del usuario.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Users Endpoints -->
+                        <div class="endpoint-card card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-users me-2"></i>Usuarios</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-get me-2">GET</span>
+                                        <span class="endpoint-path">/users/profile</span>
+                                    </div>
+                                    <p class="endpoint-description">Obtiene el perfil del usuario autenticado.</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="method-badge method-put me-2">PUT</span>
+                                        <span class="endpoint-path">/users/profile</span>
+                                    </div>
+                                    <p class="endpoint-description">Actualiza el perfil del usuario.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Playground Tab -->
+                <div class="tab-pane fade" id="playground" role="tabpanel">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h4><i class="fas fa-play me-2"></i>API Playground</h4>
+                            <p>Prueba los endpoints de la API directamente desde aquí. Ingresa los parámetros y ejecuta las peticiones.</p>
+                        </div>
+
+                        <div class="playground-form">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Endpoint</label>
+                                        <select class="form-select" id="playgroundEndpoint">
+                                            <option value="/auth/login">POST /auth/login</option>
+                                            <option value="/auth/register">POST /auth/register</option>
+                                            <option value="/users/profile">GET /users/profile</option>
+                                            <option value="/documents/upload">POST /documents/upload</option>
+                                            <option value="/documents/1">GET /documents/1</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Método HTTP</label>
+                                        <select class="form-select" id="playgroundMethod">
+                                            <option value="GET">GET</option>
+                                            <option value="POST">POST</option>
+                                            <option value="PUT">PUT</option>
+                                            <option value="DELETE">DELETE</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Headers</label>
+                                        <textarea class="form-control" id="playgroundHeaders" rows="3" placeholder='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_TOKEN"}'></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Body (JSON)</label>
+                                        <textarea class="form-control" id="playgroundBody" rows="8" placeholder='{"email": "user@example.com", "password": "password123"}'></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">URL Base</label>
+                                        <input type="text" class="form-control" id="playgroundBaseUrl" value="https://api.notarypro.cl/v1" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary-custom" onclick="executeRequest()">
+                                    <i class="fas fa-play me-2"></i>Ejecutar Petición
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="clearPlayground()">
+                                    <i class="fas fa-eraser me-2"></i>Limpiar
+                                </button>
+                                <button class="btn btn-outline-info" onclick="loadExample()">
+                                    <i class="fas fa-lightbulb me-2"></i>Cargar Ejemplo
+                                </button>
+                            </div>
+
+                            <div id="playgroundResponse" class="mt-4" style="display: none;">
+                                <h6>Respuesta:</h6>
+                                <div class="response-container">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span>Status: <span id="responseStatus" class="response-status"></span></span>
+                                        <span>Tiempo: <span id="responseTime"></span>ms</span>
+                                    </div>
+                                    <pre id="responseContent"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Examples Tab -->
+                <div class="tab-pane fade" id="examples" role="tabpanel">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h4><i class="fas fa-code me-2"></i>Ejemplos de Código</h4>
+                            <p>Implementa la API de NotaryPro en tu lenguaje de programación preferido.</p>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fab fa-js me-2"></i>JavaScript/Node.js</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="code-block">
+                                            <pre><code class="language-javascript">const axios = require('axios');
+
+const API_BASE = 'https://api.notarypro.cl/v1';
+
+// Login
+async function login(email, password) {
+    try {
+        const response = await axios.post(`${API_BASE}/auth/login`, {
+            email,
+            password
+        });
+        return response.data.token;
+    } catch (error) {
+        console.error('Error en login:', error.response.data);
+    }
+}
+
+// Subir documento
+async function uploadDocument(token, fileBuffer, filename) {
+    try {
+        const response = await axios.post(`${API_BASE}/documents/upload`, {
+            file: fileBuffer,
+            filename: filename
+        }, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error al subir documento:', error.response.data);
+    }</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fab fa-python me-2"></i>Python</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="code-block">
+                                            <pre><code class="language-python">import requests
+import json
+
+API_BASE = 'https://api.notarypro.cl/v1'
+
+def login(email, password):
+    try:
+        response = requests.post(f'{API_BASE}/auth/login', json={
+            'email': email,
+            'password': password
+        })
+        return response.json()['token']
+    except Exception as e:
+        print(f'Error en login: {e}')
+
+def upload_document(token, file_path, filename):
+    try:
+        with open(file_path, 'rb') as f:
+            files = {'file': (filename, f, 'application/pdf')}
+            headers = {'Authorization': f'Bearer {token}'}
+            
+            response = requests.post(
+                f'{API_BASE}/documents/upload',
+                files=files,
+                headers=headers
+            )
+            return response.json()
+    except Exception as e:
+        print(f'Error al subir documento: {e}')</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fab fa-php me-2"></i>PHP</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="code-block">
+                                            <pre><code class="language-php">&lt;?php
+$api_base = 'https://api.notarypro.cl/v1';
+
+function login($email, $password) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $api_base . '/auth/login');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'email' => $email,
+        'password' => $password
+    ]));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json'
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    return json_decode($response, true);
+}
+
+function uploadDocument($token, $file_path, $filename) {
+    $ch = curl_init();
+    $file = new CURLFile($file_path);
+    
+    curl_setopt($ch, CURLOPT_URL, $api_base . '/documents/upload');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, [
+        'file' => $file,
+        'filename' => $filename
+    ]);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $token
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    return json_decode($response, true);
+}
+?&gt;</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fab fa-java me-2"></i>Java</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="code-block">
+                                            <pre><code class="language-java">import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+import java.nio.file.Path;
+
+public class NotaryProAPI {
+    private static final String API_BASE = "https://api.notarypro.cl/v1";
+    private static final HttpClient client = HttpClient.newHttpClient();
+    
+    public static String login(String email, String password) throws Exception {
+        String json = String.format("{\"email\":\"%s\",\"password\":\"%s\"}", email, password);
+        
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(API_BASE + "/auth/login"))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(json))
+            .build();
+            
+        HttpResponse<String> response = client.send(request, 
+            HttpResponse.BodyHandlers.ofString());
+        
+        // Parse response to get token
+        return response.body(); // Simplified
+    }
+    
+    public static String uploadDocument(String token, Path filePath, String filename) throws Exception {
+        // Implementation for file upload
+        return "Document uploaded successfully";
+    }
+}</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Prism.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    
+    <script>
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePlayground();
+            setupSearch();
+        });
+
+        // Initialize Playground
+        function initializePlayground() {
+            // Set default values
+            document.getElementById('playgroundMethod').value = 'POST';
+            document.getElementById('playgroundHeaders').value = JSON.stringify({
+                'Content-Type': 'application/json'
+            }, null, 2);
+            
+            // Update method when endpoint changes
+            document.getElementById('playgroundEndpoint').addEventListener('change', function() {
+                const endpoint = this.value;
+                if (endpoint.includes('/auth/login') || endpoint.includes('/auth/register')) {
+                    document.getElementById('playgroundMethod').value = 'POST';
+                } else if (endpoint.includes('/users/profile')) {
+                    document.getElementById('playgroundMethod').value = 'GET';
+                }
+            });
+        }
+
+        // Setup Search
+        function setupSearch() {
+            const searchInput = document.getElementById('searchEndpoints');
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase();
+                const navLinks = document.querySelectorAll('.nav-link');
+                
+                navLinks.forEach(link => {
+                    const text = link.textContent.toLowerCase();
+                    if (text.includes(query)) {
+                        link.style.display = 'block';
+                    } else {
+                        link.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Execute API Request
+        async function executeRequest() {
+            const method = document.getElementById('playgroundMethod').value;
+            const endpoint = document.getElementById('playgroundEndpoint').value;
+            const headers = document.getElementById('playgroundHeaders').value;
+            const body = document.getElementById('playgroundBody').value;
+            const baseUrl = document.getElementById('playgroundBaseUrl').value;
+
+            try {
+                const startTime = Date.now();
+                
+                // Parse headers
+                let parsedHeaders = {};
+                try {
+                    parsedHeaders = JSON.parse(headers);
+                } catch (e) {
+                    alert('Error en el formato de headers JSON');
+                    return;
+                }
+
+                // Prepare request options
+                const requestOptions = {
+                    method: method,
+                    headers: parsedHeaders
+                };
+
+                // Add body for POST/PUT requests
+                if ((method === 'POST' || method === 'PUT') && body.trim()) {
+                    try {
+                        requestOptions.body = body;
+                    } catch (e) {
+                        alert('Error en el formato del body JSON');
+                        return;
+                    }
+                }
+
+                // Make request (simulated for demo)
+                const response = await simulateAPIRequest(method, endpoint, requestOptions);
+                const endTime = Date.now();
+
+                // Display response
+                displayResponse(response, endTime - startTime);
+                
+            } catch (error) {
+                console.error('Error executing request:', error);
+                alert('Error al ejecutar la petición: ' + error.message);
+            }
+        }
+
+        // Simulate API Request (for demo purposes)
+        async function simulateAPIRequest(method, endpoint, options) {
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+            
+            // Return mock response based on endpoint
+            if (endpoint.includes('/auth/login')) {
+                return {
+                    status: 200,
+                    data: {
+                        success: true,
+                        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                        user: {
+                            id: 1,
+                            email: 'user@example.com',
+                            role: 'user'
+                        }
+                    }
+                };
+            } else if (endpoint.includes('/users/profile')) {
+                return {
+                    status: 200,
+                    data: {
+                        id: 1,
+                        email: 'user@example.com',
+                        name: 'Usuario Ejemplo',
+                        role: 'user',
+                        created_at: '2024-01-15T10:30:00Z'
+                    }
+                };
+            } else {
+                return {
+                    status: 200,
+                    data: {
+                        message: 'Request successful',
+                        endpoint: endpoint,
+                        method: method
+                    }
+                };
+            }
+        }
+
+        // Display Response
+        function displayResponse(response, responseTime) {
+            const responseContainer = document.getElementById('playgroundResponse');
+            const statusElement = document.getElementById('responseStatus');
+            const timeElement = document.getElementById('responseTime');
+            const contentElement = document.getElementById('responseContent');
+
+            // Set status
+            statusElement.textContent = response.status;
+            statusElement.className = `response-status status-${response.status}`;
+
+            // Set time
+            timeElement.textContent = responseTime;
+
+            // Set content
+            contentElement.textContent = JSON.stringify(response.data, null, 2);
+
+            // Show response
+            responseContainer.style.display = 'block';
+        }
+
+        // Clear Playground
+        function clearPlayground() {
+            document.getElementById('playgroundBody').value = '';
+            document.getElementById('playgroundResponse').style.display = 'none';
+        }
+
+        // Load Example
+        function loadExample() {
+            const endpoint = document.getElementById('playgroundEndpoint').value;
+            
+            if (endpoint.includes('/auth/login')) {
+                document.getElementById('playgroundBody').value = JSON.stringify({
+                    email: 'user@example.com',
+                    password: 'password123'
+                }, null, 2);
+            } else if (endpoint.includes('/auth/register')) {
+                document.getElementById('playgroundBody').value = JSON.stringify({
+                    email: 'newuser@example.com',
+                    password: 'password123',
+                    name: 'Nuevo Usuario'
+                }, null, 2);
+            } else if (endpoint.includes('/documents/upload')) {
+                document.getElementById('playgroundBody').value = JSON.stringify({
+                    filename: 'documento.pdf',
+                    description: 'Documento de ejemplo'
+                }, null, 2);
+            }
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                this.classList.add('active');
+                
+                // Handle navigation
+                const section = this.getAttribute('href').substring(1);
+                console.log(`Navigating to: ${section}`);
+            });
+        });
+    </script>
+</body>
+</html>

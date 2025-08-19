@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaryPro Demo Playground</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.34.0/min/vs/loader.js"></script>
+    <style>
+        .monaco-editor { height: 400px; border-radius: 8px; }
+        .code-output { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; }
+        .playground-card { transition: all 0.3s ease; }
+        .playground-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-code text-2xl text-blue-600 mr-3"></i>
+                        <h1 class="text-xl font-bold text-gray-900 dark:text-white">NotaryPro Demo Playground</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="toggleTheme()" id="themeToggle" class="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button onclick="goBack()" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                            <i class="fas fa-arrow-left mr-2"></i>Volver
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Playground Overview -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Playground Interactivo</h2>
+                <p class="text-gray-600 dark:text-gray-400">Ejecuta código en tiempo real y prueba las APIs de NotaryPro</p>
+            </div>
+
+            <!-- Language Selection -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Seleccionar Lenguaje</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button onclick="selectLanguage('javascript')" class="language-btn p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300 text-center" data-language="javascript">
+                        <i class="fab fa-js-square text-2xl text-yellow-500 mb-2"></i>
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">JavaScript</p>
+                    </button>
+                    <button onclick="selectLanguage('python')" class="language-btn p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-300 text-center" data-language="python">
+                        <i class="fab fa-python text-2xl text-blue-500 mb-2"></i>
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Python</p>
+                    </button>
+                    <button onclick="selectLanguage('curl')" class="language-btn p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-500/20 transition-all duration-300 text-center" data-language="curl">
+                        <i class="fas fa-terminal text-2xl text-purple-500 mb-2"></i>
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">cURL</p>
+                    </button>
+                    <button onclick="selectLanguage('php')" class="language-btn p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-300 text-center" data-language="php">
+                        <i class="fab fa-php text-2xl text-indigo-500 mb-2"></i>
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">PHP</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Code Editor and Output -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Code Editor -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Editor de Código</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="loadTemplate()" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-file-code mr-1"></i>Plantilla
+                            </button>
+                            <button onclick="clearEditor()" class="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Limpiar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="editor" class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden"></div>
+                    <div class="mt-4 flex space-x-2">
+                        <button onclick="executeCode()" class="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors">
+                            <i class="fas fa-play mr-2"></i>Ejecutar
+                        </button>
+                        <button onclick="saveCode()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-save mr-1"></i>Guardar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Output and Results -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Resultados</h3>
+                    <div id="output" class="space-y-4">
+                        <div class="text-center text-gray-500 dark:text-gray-400 py-8">
+                            <i class="fas fa-play-circle text-4xl mb-2"></i>
+                            <p>Ejecuta código para ver los resultados aquí</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Templates -->
+            <div class="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Plantillas de Código</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="playground-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onclick="loadTemplate('api_call')">
+                        <h4 class="font-medium text-gray-900 dark:text-white mb-2">Llamada API</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Ejemplo básico de llamada a la API</p>
+                    </div>
+                    <div class="playground-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onclick="loadTemplate('document_creation')">
+                        <h4 class="font-medium text-gray-900 dark:text-white mb-2">Crear Documento</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Crear un nuevo documento</p>
+                    </div>
+                    <div class="playground-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onclick="loadTemplate('signature_request')">
+                        <h4 class="font-medium text-gray-900 dark:text-white mb-2">Solicitar Firma</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Solicitar firma de documento</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution History -->
+            <div class="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Historial de Ejecuciones</h3>
+                <div id="history" class="space-y-2">
+                    <!-- History items will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLanguage = 'javascript';
+        let editor = null;
+        let executionHistory = [];
+
+        // Initialize Monaco Editor
+        require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.34.0/min/vs' } });
+        require(['vs/editor/editor.main'], function() {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: getDefaultCode('javascript'),
+                language: 'javascript',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: 'on',
+                roundedSelection: false,
+                scrollBeyondLastLine: false
+            });
+        });
+
+        // Language selection
+        function selectLanguage(language) {
+            currentLanguage = language;
+            
+            // Update button states
+            document.querySelectorAll('.language-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+                btn.classList.add('border-gray-200', 'dark:border-gray-600');
+            });
+            
+            const selectedBtn = document.querySelector(`[data-language="${language}"]`);
+            selectedBtn.classList.remove('border-gray-200', 'dark:border-gray-600');
+            selectedBtn.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+            
+            // Update editor language and content
+            if (editor) {
+                monaco.editor.setModelLanguage(editor.getModel(), getMonacoLanguage(language));
+                editor.setValue(getDefaultCode(language));
+            }
+        }
+
+        // Get Monaco editor language
+        function getMonacoLanguage(language) {
+            const languages = {
+                javascript: 'javascript',
+                python: 'python',
+                curl: 'shell',
+                php: 'php'
+            };
+            return languages[language] || 'javascript';
+        }
+
+        // Get default code for language
+        function getDefaultCode(language) {
+            const templates = {
+                javascript: `// NotaryPro API Client - JavaScript
+const API_BASE = 'https://api.notarypro.com/v1';
+const TOKEN = 'YOUR_API_TOKEN';
+
+async function testAPI() {
+  try {
+    const response = await fetch(\`\${API_BASE}/documents\`, {
+      method: 'GET',
+      headers: {
+        'Authorization': \`Bearer \${TOKEN}\`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    console.log('API Response:', data);
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+// Execute the function
+testAPI();`,
+                python: `# NotaryPro API Client - Python
+import requests
+import json
+
+API_BASE = 'https://api.notarypro.com/v1'
+TOKEN = 'YOUR_API_TOKEN'
+
+def test_api():
+    try:
+        headers = {
+            'Authorization': f'Bearer {TOKEN}',
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(f'{API_BASE}/documents', headers=headers)
+        data = response.json()
+        
+        print('API Response:', data)
+        return data
+    except Exception as error:
+        print('Error:', error)
+        raise error
+
+# Execute the function
+test_api()`,
+                curl: `# NotaryPro API Client - cURL
+API_BASE="https://api.notarypro.com/v1"
+TOKEN="YOUR_API_TOKEN"
+
+# Test API call
+curl -X GET "\${API_BASE}/documents" \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  -H "Content-Type: application/json" \\
+  -v`,
+                php: `<?php
+// NotaryPro API Client - PHP
+$api_base = 'https://api.notarypro.com/v1';
+$token = 'YOUR_API_TOKEN';
+
+function testAPI() {
+    global $api_base, $token;
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $api_base . '/documents');
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json'
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    $data = json_decode($response, true);
+    
+    if (curl_error($ch)) {
+        throw new Exception(curl_error($ch));
+    }
+    
+    curl_close($ch);
+    
+    echo 'API Response: ';
+    print_r($data);
+    return $data;
+}
+
+// Execute the function
+testAPI();
+?>`
+            };
+            return templates[language] || templates.javascript;
+        }
+
+        // Load template
+        function loadTemplate(templateType = null) {
+            if (!editor) return;
+            
+            let code = '';
+            if (templateType === 'api_call') {
+                code = getDefaultCode(currentLanguage);
+            } else if (templateType === 'document_creation') {
+                code = getDocumentCreationTemplate(currentLanguage);
+            } else if (templateType === 'signature_request') {
+                code = getSignatureRequestTemplate(currentLanguage);
+            } else {
+                code = getDefaultCode(currentLanguage);
+            }
+            
+            editor.setValue(code);
+        }
+
+        // Get document creation template
+        function getDocumentCreationTemplate(language) {
+            const templates = {
+                javascript: `// Crear documento
+const documentData = {
+  title: 'Contrato de Arrendamiento',
+  content: 'Este contrato establece...',
+  type: 'contract',
+  status: 'draft'
+};
+
+const response = await fetch(\`\${API_BASE}/documents\`, {
+  method: 'POST',
+  headers: {
+    'Authorization': \`Bearer \${TOKEN}\`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(documentData)
+});
+
+const result = await response.json();
+console.log('Documento creado:', result);`,
+                python: `# Crear documento
+document_data = {
+    'title': 'Contrato de Arrendamiento',
+    'content': 'Este contrato establece...',
+    'type': 'contract',
+    'status': 'draft'
+}
+
+response = requests.post(f'{API_BASE}/documents', 
+                       json=document_data, 
+                       headers=headers)
+
+result = response.json()
+print('Documento creado:', result)`,
+                curl: `# Crear documento
+curl -X POST "\${API_BASE}/documents" \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "Contrato de Arrendamiento",
+    "content": "Este contrato establece...",
+    "type": "contract",
+    "status": "draft"
+  }'`,
+                php: `// Crear documento
+$document_data = [
+    'title' => 'Contrato de Arrendamiento',
+    'content' => 'Este contrato establece...',
+    'type' => 'contract',
+    'status' => 'draft'
+];
+
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($document_data));
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+
+echo 'Documento creado: ';
+print_r($result);`
+            };
+            return templates[language] || templates.javascript;
+        }
+
+        // Get signature request template
+        function getSignatureRequestTemplate(language) {
+            const templates = {
+                javascript: `// Solicitar firma
+const signatureData = {
+  document_id: 'doc_123456',
+  signers: [
+    { email: 'firmante@ejemplo.com', name: 'Juan Pérez' }
+  ],
+  message: 'Por favor firma este documento'
+};
+
+const response = await fetch(\`\${API_BASE}/signatures\`, {
+  method: 'POST',
+  headers: {
+    'Authorization': \`Bearer \${TOKEN}\`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(signatureData)
+});
+
+const result = await response.json();
+console.log('Firma solicitada:', result);`,
+                python: `# Solicitar firma
+signature_data = {
+    'document_id': 'doc_123456',
+    'signers': [
+        {'email': 'firmante@ejemplo.com', 'name': 'Juan Pérez'}
+    ],
+    'message': 'Por favor firma este documento'
+}
+
+response = requests.post(f'{API_BASE}/signatures', 
+                       json=signature_data, 
+                       headers=headers)
+
+result = response.json()
+print('Firma solicitada:', result)`,
+                curl: `# Solicitar firma
+curl -X POST "\${API_BASE}/signatures" \\
+  -H "Authorization: Bearer \${TOKEN}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "document_id": "doc_123456",
+    "signers": [
+      {"email": "firmante@ejemplo.com", "name": "Juan Pérez"}
+    ],
+    "message": "Por favor firma este documento"
+  }'`,
+                php: `// Solicitar firma
+$signature_data = [
+    'document_id' => 'doc_123456',
+    'signers' => [
+        ['email' => 'firmante@ejemplo.com', 'name' => 'Juan Pérez']
+    ],
+    'message' => 'Por favor firma este documento'
+];
+
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($signature_data));
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+
+echo 'Firma solicitada: ';
+print_r($result);`
+            };
+            return templates[language] || templates.javascript;
+        }
+
+        // Execute code
+        async function executeCode() {
+            if (!editor) return;
+            
+            const code = editor.getValue();
+            const outputDiv = document.getElementById('output');
+            
+            // Clear previous output
+            outputDiv.innerHTML = '';
+            
+            // Show loading
+            outputDiv.innerHTML = `
+                <div class="text-center text-blue-600 dark:text-blue-400 py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p>Ejecutando código...</p>
+                </div>
+            `;
+            
+            try {
+                let result;
+                const startTime = Date.now();
+                
+                if (currentLanguage === 'javascript') {
+                    result = await executeJavaScript(code);
+                } else if (currentLanguage === 'python') {
+                    result = await executePython(code);
+                } else if (currentLanguage === 'curl') {
+                    result = await executeCurl(code);
+                } else if (currentLanguage === 'php') {
+                    result = await executePHP(code);
+                }
+                
+                const executionTime = Date.now() - startTime;
+                
+                // Display result
+                displayResult(result, executionTime);
+                
+                // Add to history
+                addToHistory(code, result, executionTime);
+                
+            } catch (error) {
+                displayError(error.message);
+            }
+        }
+
+        // Execute JavaScript
+        async function executeJavaScript(code) {
+            // Create a safe execution environment
+            const safeCode = code.replace(/require|import|eval|Function|global|process/g, '');
+            
+            // Mock API responses for demo purposes
+            const mockAPI = {
+                fetch: async (url, options) => {
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
+                    
+                    if (url.includes('/documents')) {
+                        if (options.method === 'GET') {
+                            return {
+                                json: async () => ({
+                                    success: true,
+                                    data: [
+                                        { id: 'doc_123', title: 'Contrato Demo', status: 'draft' }
+                                    ]
+                                })
+                            };
+                        } else if (options.method === 'POST') {
+                            return {
+                                json: async () => ({
+                                    success: true,
+                                    data: {
+                                        id: 'doc_' + Math.random().toString(36).substr(2, 9),
+                                        title: JSON.parse(options.body).title,
+                                        status: 'created'
+                                    }
+                                })
+                            };
+                        }
+                    }
+                    
+                    if (url.includes('/signatures')) {
+                        return {
+                            json: async () => ({
+                                success: true,
+                                data: {
+                                    id: 'sig_' + Math.random().toString(36).substr(2, 9),
+                                    status: 'pending'
+                                }
+                            })
+                        };
+                    }
+                    
+                    return {
+                        json: async () => ({ success: true, message: 'API call simulated' })
+                    };
+                }
+            };
+            
+            // Execute in sandbox
+            const sandbox = {
+                console: {
+                    log: (...args) => console.log(...args),
+                    error: (...args) => console.error(...args)
+                },
+                fetch: mockAPI.fetch,
+                API_BASE: 'https://api.notarypro.com/v1',
+                TOKEN: 'demo_token_123'
+            };
+            
+            const func = new Function('console', 'fetch', 'API_BASE', 'TOKEN', safeCode);
+            const output = func(sandbox.console, sandbox.fetch, sandbox.API_BASE, sandbox.TOKEN);
+            
+            return {
+                output: output,
+                console: sandbox.console,
+                success: true
+            };
+        }
+
+        // Execute Python (simulated)
+        async function executePython(code) {
+            await new Promise(resolve => setTimeout(resolve, 200)); // Simulate execution time
+            
+            // Simulate Python execution
+            const mockResponse = {
+                success: true,
+                data: {
+                    message: 'Python execution simulated',
+                    code: code.substring(0, 100) + '...',
+                    timestamp: new Date().toISOString()
+                }
+            };
+            
+            return {
+                output: mockResponse,
+                success: true
+            };
+        }
+
+        // Execute cURL (simulated)
+        async function executeCurl(code) {
+            await new Promise(resolve => setTimeout(resolve, 150)); // Simulate execution time
+            
+            // Simulate cURL execution
+            const mockResponse = {
+                success: true,
+                data: {
+                    message: 'cURL command simulated',
+                    command: code,
+                    response: {
+                        status: '200 OK',
+                        headers: { 'content-type': 'application/json' },
+                        body: { success: true, message: 'API call successful' }
+                    }
+                }
+            };
+            
+            return {
+                output: mockResponse,
+                success: true
+            };
+        }
+
+        // Execute PHP (simulated)
+        async function executePHP(code) {
+            await new Promise(resolve => setTimeout(resolve, 180)); // Simulate execution time
+            
+            // Simulate PHP execution
+            const mockResponse = {
+                success: true,
+                data: {
+                    message: 'PHP execution simulated',
+                    code: code.substring(0, 100) + '...',
+                    output: 'API Response: {"success": true, "message": "Document created"}'
+                }
+            };
+            
+            return {
+                output: mockResponse,
+                success: true
+            };
+        }
+
+        // Display result
+        function displayResult(result, executionTime) {
+            const outputDiv = document.getElementById('output');
+            
+            outputDiv.innerHTML = `
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-medium text-green-800 dark:text-green-200">
+                            <i class="fas fa-check-circle mr-2"></i>Ejecución Exitosa
+                        </h4>
+                        <span class="text-sm text-green-600 dark:text-green-400">${executionTime}ms</span>
+                    </div>
+                    <div class="code-output text-sm text-green-700 dark:text-green-300 bg-white dark:bg-gray-900 p-3 rounded border overflow-x-auto">
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Display error
+        function displayError(errorMessage) {
+            const outputDiv = document.getElementById('output');
+            
+            outputDiv.innerHTML = `
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 mr-2"></i>
+                        <h4 class="font-medium text-red-800 dark:text-red-200">Error de Ejecución</h4>
+                    </div>
+                    <p class="text-sm text-red-700 dark:text-red-300">${errorMessage}</p>
+                </div>
+            `;
+        }
+
+        // Add to history
+        function addToHistory(code, result, executionTime) {
+            const historyItem = {
+                id: Date.now(),
+                language: currentLanguage,
+                code: code.substring(0, 100) + (code.length > 100 ? '...' : ''),
+                result: result,
+                executionTime: executionTime,
+                timestamp: new Date().toISOString()
+            };
+            
+            executionHistory.unshift(historyItem);
+            if (executionHistory.length > 10) {
+                executionHistory.pop();
+            }
+            
+            updateHistoryDisplay();
+        }
+
+        // Update history display
+        function updateHistoryDisplay() {
+            const historyDiv = document.getElementById('history');
+            
+            if (executionHistory.length === 0) {
+                historyDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">No hay ejecuciones recientes</p>';
+                return;
+            }
+            
+            historyDiv.innerHTML = executionHistory.map(item => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <span class="px-2 py-1 text-xs font-medium rounded ${getLanguageColor(item.language)}">${item.language}</span>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">${item.code}</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span>${item.executionTime}ms</span>
+                        <button onclick="loadFromHistory('${item.id}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get language color
+        function getLanguageColor(language) {
+            const colors = {
+                javascript: 'bg-yellow-100 text-yellow-800',
+                python: 'bg-blue-100 text-blue-800',
+                curl: 'bg-purple-100 text-purple-800',
+                php: 'bg-indigo-100 text-indigo-800'
+            };
+            return colors[language] || 'bg-gray-100 text-gray-800';
+        }
+
+        // Load from history
+        function loadFromHistory(historyId) {
+            const item = executionHistory.find(h => h.id == historyId);
+            if (item && editor) {
+                selectLanguage(item.language);
+                editor.setValue(item.code);
+            }
+        }
+
+        // Clear editor
+        function clearEditor() {
+            if (editor) {
+                editor.setValue('');
+            }
+        }
+
+        // Save code
+        function saveCode() {
+            if (!editor) return;
+            
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `notarypro-playground-${currentLanguage}-${Date.now()}.${getFileExtension(currentLanguage)}`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Código guardado exitosamente');
+        }
+
+        // Get file extension
+        function getFileExtension(language) {
+            const extensions = {
+                javascript: 'js',
+                python: 'py',
+                curl: 'sh',
+                php: 'php'
+            };
+            return extensions[language] || 'txt';
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark:bg-gray-900');
+            
+            if (isDark) {
+                body.classList.remove('dark:bg-gray-900');
+                document.documentElement.classList.remove('dark');
+                if (editor) {
+                    monaco.editor.setTheme('vs');
+                }
+            } else {
+                body.classList.add('dark:bg-gray-900');
+                document.documentElement.classList.add('dark');
+                if (editor) {
+                    monaco.editor.setTheme('vs-dark');
+                }
+            }
+        }
+
+        // Go back
+        function goBack() {
+            window.history.back();
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            selectLanguage('javascript');
+            updateHistoryDisplay();
+        });
+    </script>
+</body>
+</html>

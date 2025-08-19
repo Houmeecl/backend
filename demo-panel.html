@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaryPro Demo Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 w-96">
+            <div class="text-center mb-6">
+                <i class="fas fa-shield-alt text-4xl text-blue-600 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-800">NotaryPro Demo</h2>
+                <p class="text-gray-600">Accede al sistema de demostración</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="loginEmail" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@demo.com" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                    <input type="password" id="loginPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin123" required>
+                </div>
+                
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                    Iniciar Sesión
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600 mb-2">Credenciales de Demo:</p>
+                <div class="text-xs text-gray-500 space-y-1">
+                    <div><strong>Admin:</strong> admin@demo.com / admin123</div>
+                    <div><strong>Vendedor:</strong> vendedor@demo.com / vendedor123</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until login) -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-shield-alt text-2xl text-blue-600 mr-3"></i>
+                        <h1 class="text-xl font-bold text-gray-900">NotaryPro Demo Panel</h1>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <span id="userInfo" class="text-sm text-gray-600"></span>
+                        <button id="logoutBtn" class="text-sm text-red-600 hover:text-red-800">
+                            <i class="fas fa-sign-out-alt mr-1"></i>Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Dashboard -->
+            <div id="dashboardSection">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Dashboard de Demostración</h2>
+                    
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-blue-100 rounded-lg">
+                                    <i class="fas fa-cube text-blue-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Módulos</p>
+                                    <p id="totalModules" class="text-2xl font-bold text-gray-900">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-green-100 rounded-lg">
+                                    <i class="fas fa-code text-green-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Ejemplos</p>
+                                    <p id="totalExamples" class="text-2xl font-bold text-gray-900">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-purple-100 rounded-lg">
+                                    <i class="fas fa-users text-purple-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Usuarios Demo</p>
+                                    <p id="demoUsers" class="text-2xl font-bold text-gray-900">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-yellow-100 rounded-lg">
+                                    <i class="fas fa-chart-line text-yellow-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Estado</p>
+                                    <p id="systemStatus" class="text-2xl font-bold text-green-600">Operativo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-white rounded-lg shadow p-6 mb-8">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Acciones Rápidas</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button onclick="showModuleExamples('documents')" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center">
+                                <i class="fas fa-file-alt text-2xl text-blue-600 mb-2"></i>
+                                <p class="text-sm font-medium text-gray-700">Ver Documentos</p>
+                            </button>
+                            
+                            <button onclick="showModuleExamples('signatures')" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors text-center">
+                                <i class="fas fa-signature text-2xl text-green-600 mb-2"></i>
+                                <p class="text-sm font-medium text-gray-700">Probar Firmas</p>
+                            </button>
+                            
+                            <button onclick="showModuleExamples('analytics')" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-center">
+                                <i class="fas fa-chart-bar text-2xl text-purple-600 mb-2"></i>
+                                <p class="text-sm font-medium text-gray-700">Explorar Analytics</p>
+                            </button>
+                            
+                            <button onclick="showModuleExamples('saas')" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-yellow-500 hover:bg-yellow-50 transition-colors text-center">
+                                <i class="fas fa-users-cog text-2xl text-yellow-600 mb-2"></i>
+                                <p class="text-sm font-medium text-gray-700">Gestión SaaS</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modules Overview -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Módulos Disponibles</h3>
+                        <div id="modulesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Modules will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module Examples Section -->
+            <div id="examplesSection" class="hidden">
+                <div class="mb-6">
+                    <button onclick="showDashboard()" class="text-blue-600 hover:text-blue-800 mb-4">
+                        <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+                    </button>
+                    <h2 id="moduleTitle" class="text-2xl font-bold text-gray-900"></h2>
+                    <p id="moduleDescription" class="text-gray-600 mt-2"></p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Examples -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Ejemplos de API</h3>
+                        <div id="examplesList" class="space-y-4">
+                            <!-- Examples will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Visual Data -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Visualización de Datos</h3>
+                        <div id="visualData" class="h-64 flex items-center justify-center">
+                            <canvas id="moduleChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Endpoints -->
+                <div class="mt-8 bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Endpoints Disponibles</h3>
+                    <div id="endpointsList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Endpoints will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span id="notificationMessage"></span>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:3000/api/v1';
+        let authToken = localStorage.getItem('demoToken');
+        let currentUser = null;
+        let currentChart = null;
+
+        // Check authentication on load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (authToken) {
+                checkAuthAndLoadDashboard();
+            } else {
+                showLoginModal();
+            }
+        });
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/demo/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    authToken = data.data.token;
+                    currentUser = data.data.user;
+                    localStorage.setItem('demoToken', authToken);
+                    
+                    hideLoginModal();
+                    showMainApp();
+                    loadDashboard();
+                    showNotification('Login exitoso', 'success');
+                } else {
+                    showNotification(data.error.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Error de conexión', 'error');
+            }
+        });
+
+        // Logout handler
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('demoToken');
+            hideMainApp();
+            showLoginModal();
+        });
+
+        // Authentication check
+        async function checkAuthAndLoadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/demo/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showMainApp();
+                    loadDashboard();
+                } else {
+                    throw new Error('Token inválido');
+                }
+            } catch (error) {
+                authToken = null;
+                localStorage.removeItem('demoToken');
+                showLoginModal();
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/demo/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateDashboardStats(data.data.stats);
+                    updateUserInfo();
+                    loadModulesGrid(data.data.modules);
+                }
+            } catch (error) {
+                showNotification('Error cargando dashboard', 'error');
+            }
+        }
+
+        // Update dashboard statistics
+        function updateDashboardStats(stats) {
+            document.getElementById('totalModules').textContent = stats.total_modules;
+            document.getElementById('totalExamples').textContent = stats.total_examples;
+            document.getElementById('demoUsers').textContent = stats.demo_users;
+            document.getElementById('systemStatus').textContent = stats.system_status;
+        }
+
+        // Update user information
+        function updateUserInfo() {
+            if (currentUser) {
+                const userInfo = document.getElementById('userInfo');
+                userInfo.innerHTML = `
+                    <span class="bg-${currentUser.role === 'admin' ? 'blue' : 'green'}-100 text-${currentUser.role === 'admin' ? 'blue' : 'green'}-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        ${currentUser.role === 'admin' ? 'Administrador' : 'Vendedor'}
+                    </span>
+                    <span class="ml-2 text-gray-700">${currentUser.name}</span>
+                `;
+            }
+        }
+
+        // Load modules grid
+        function loadModulesGrid(modules) {
+            const grid = document.getElementById('modulesGrid');
+            grid.innerHTML = '';
+            
+            modules.forEach(module => {
+                const moduleCard = document.createElement('div');
+                moduleCard.className = 'bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer';
+                moduleCard.onclick = () => showModuleExamples(module.name);
+                
+                moduleCard.innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <div class="p-2 bg-blue-100 rounded-lg">
+                            <i class="fas fa-${getModuleIcon(module.name)} text-blue-600"></i>
+                        </div>
+                        <h4 class="ml-3 text-lg font-medium text-gray-900">${module.name.charAt(0).toUpperCase() + module.name.slice(1)}</h4>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-4">${module.description}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500">${module.examples_count} ejemplos</span>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </div>
+                `;
+                
+                grid.appendChild(moduleCard);
+            });
+        }
+
+        // Show module examples
+        async function showModuleExamples(moduleName) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/demo/examples/${moduleName}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const module = data.data;
+                    
+                    // Update UI
+                    document.getElementById('moduleTitle').textContent = module.name.charAt(0).toUpperCase() + module.name.slice(1);
+                    document.getElementById('moduleDescription').textContent = module.description;
+                    
+                    // Load examples
+                    loadExamples(module.examples);
+                    
+                    // Load endpoints
+                    loadEndpoints(module.endpoints);
+                    
+                    // Load visual data
+                    if (module.visual_data) {
+                        loadVisualData(module.visual_data);
+                    }
+                    
+                    // Show examples section
+                    document.getElementById('dashboardSection').classList.add('hidden');
+                    document.getElementById('examplesSection').classList.remove('hidden');
+                }
+            } catch (error) {
+                showNotification('Error cargando ejemplos', 'error');
+            }
+        }
+
+        // Load examples
+        function loadExamples(examples) {
+            const container = document.getElementById('examplesList');
+            container.innerHTML = '';
+            
+            examples.forEach((example, index) => {
+                const exampleCard = document.createElement('div');
+                exampleCard.className = 'border border-gray-200 rounded-lg p-4';
+                
+                exampleCard.innerHTML = `
+                    <h4 class="font-medium text-gray-900 mb-2">${example.description}</h4>
+                    <div class="space-y-2">
+                        <div>
+                            <span class="text-xs font-medium text-gray-500">Request:</span>
+                            <pre class="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">${JSON.stringify(example.request, null, 2)}</pre>
+                        </div>
+                        <div>
+                            <span class="text-xs font-medium text-gray-500">Response:</span>
+                            <pre class="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">${JSON.stringify(example.response, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(exampleCard);
+            });
+        }
+
+        // Load endpoints
+        function loadEndpoints(endpoints) {
+            const container = document.getElementById('endpointsList');
+            container.innerHTML = '';
+            
+            endpoints.forEach(endpoint => {
+                const endpointCard = document.createElement('div');
+                endpointCard.className = 'bg-gray-50 border border-gray-200 rounded-lg p-3';
+                
+                const [method, path] = endpoint.split(' ');
+                const methodColor = getMethodColor(method);
+                
+                endpointCard.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="px-2 py-1 text-xs font-medium rounded ${methodColor}">${method}</span>
+                        <code class="text-sm text-gray-700">${path}</code>
+                    </div>
+                `;
+                
+                container.appendChild(endpointCard);
+            });
+        }
+
+        // Load visual data
+        function loadVisualData(visualData) {
+            const canvas = document.getElementById('moduleChart');
+            
+            // Destroy previous chart if exists
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            // Create new chart
+            currentChart = new Chart(canvas, {
+                type: visualData.chart_type,
+                data: visualData.data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Show dashboard
+        function showDashboard() {
+            document.getElementById('examplesSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            
+            // Destroy chart if exists
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+        }
+
+        // Utility functions
+        function getModuleIcon(moduleName) {
+            const icons = {
+                documents: 'file-alt',
+                signatures: 'signature',
+                templates: 'copy',
+                users: 'users',
+                analytics: 'chart-bar',
+                saas: 'users-cog'
+            };
+            return icons[moduleName] || 'cube';
+        }
+
+        function getMethodColor(method) {
+            const colors = {
+                GET: 'bg-green-100 text-green-800',
+                POST: 'bg-blue-100 text-blue-800',
+                PUT: 'bg-yellow-100 text-yellow-800',
+                DELETE: 'bg-red-100 text-red-800'
+            };
+            return colors[method] || 'bg-gray-100 text-gray-800';
+        }
+
+        // UI functions
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function hideLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+
+        function showMainApp() {
+            document.getElementById('mainApp').classList.remove('hidden');
+        }
+
+        function hideMainApp() {
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notificationMessage');
+            
+            messageEl.textContent = message;
+            
+            // Update colors based on type
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            
+            // Show notification
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

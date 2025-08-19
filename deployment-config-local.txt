@@ -1,0 +1,38 @@
+﻿# =============================================================================
+# NOTARYPRO BACKEND - CONFIGURACION DE DESPLIEGUE LOCAL
+# =============================================================================
+# Generado automÃ¡ticamente el 2025-08-18 05:01:00
+# =============================================================================
+
+# ConfiguraciÃ³n del servidor local
+SERVER_HOST="localhost"
+SERVER_USER="local"
+SERVER_PATH="./local-deploy"
+SSH_KEY="local"
+
+# ConfiguraciÃ³n del dominio local
+DOMAIN="localhost"
+PORT="3000"
+NODE_ENV="development"
+
+# ConfiguraciÃ³n de la base de datos (Neon DB)
+DB_USER=neondb_owner
+DB_HOST=ep-dawn-night-ad9ixxns-pooler.c-2.us-east-1.aws.neon.tech
+DB_NAME=neondb
+DB_PASSWORD=npg_M2DXbHesGL7y
+DB_PORT=5432
+DATABASE_URL=postgres://neondb_owner:npg_M2DXbHesGL7y@ep-dawn-night-ad9ixxns-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+# ConfiguraciÃ³n JWT
+JWT_SECRET=notarypro_local_jwt_key_282814
+
+# ConfiguraciÃ³n de email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=tu-email@gmail.com
+SMTP_PASS=tu-app-password
+
+# URLs locales
+API_BASE_URL=http://localhost:3000
+CORS_ORIGIN=http://localhost:3000,http://localhost:3001

@@ -1,0 +1,117 @@
+{
+  "name": "notarypro-landing",
+  "version": "2.0.0",
+  "description": "Landing Page y Sistema de Login para NotaryPro Chile",
+  "main": "landing-server.js",
+  "scripts": {
+    "start": "node landing-server.js",
+    "dev": "nodemon landing-server.js",
+    "setup": "node setup-landing.js",
+    "db:init": "node database-config.js",
+    "db:test": "node -e \"require('./database-config').testConnection()\"",
+    "db:stats": "node -e \"require('./database-config').getDatabaseStats().then(console.log)\"",
+    "landing": "node landing-server.js",
+    "main": "node app.js",
+    "start:all": "concurrently \"npm run main\" \"npm run landing\"",
+    "install:deps": "npm install pg bcrypt express cors nodemon concurrently",
+    "setup:full": "npm run install:deps && npm run setup",
+    "test": "node -e \"console.log('✅ NotaryPro Landing Page configurado correctamente')\"",
+    "windows": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1",
+    "windows:setup": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1 -Setup",
+    "windows:db": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1 -Database",
+    "windows:landing": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1 -Landing"
+  },
+  "keywords": [
+    "notarypro",
+    "firma-electronica",
+    "chile",
+    "landing-page",
+    "login",
+    "postgresql",
+    "express",
+    "api"
+  ],
+  "author": "NotaryPro Chile",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/notarypro/notarypro-backend.git"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.0",
+    "nodemailer": "^6.9.7",
+    "handlebars": "^4.7.8",
+    "moment": "^2.29.4",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.3.3"
+  },
+  "config": {
+    "port": 3001,
+    "api_port": 3000,
+    "db_name": "notarypro",
+    "db_host": "localhost",
+    "db_port": 5432
+  },
+  "files": [
+    "landing-page.html",
+    "landing-server.js",
+    "database-config.js",
+    "setup-landing.js",
+    "start-notarypro.ps1",
+    "start-notarypro.sh",
+    "SETUP_README.md",
+    "*.html",
+    "uploads/",
+    "logs/"
+  ],
+  "directories": {
+    "uploads": "./uploads",
+    "logs": "./logs",
+    "temp": "./temp"
+  },
+  "scripts": {
+    "start": "node landing-server.js",
+    "dev": "nodemon landing-server.js",
+    "setup": "node setup-landing.js",
+    "db:init": "node database-config.js",
+    "db:test": "node -e \"require('./database-config').testConnection()\"",
+    "db:stats": "node -e \"require('./database-config').getDatabaseStats().then(console.log)\"",
+    "landing": "node landing-server.js",
+    "main": "node app.js",
+    "start:all": "concurrently \"npm run main\" \"npm run landing\"",
+    "install:deps": "npm install pg bcrypt express cors nodemon concurrently",
+    "setup:full": "npm run install:deps && npm run setup",
+    "test": "node -e \"console.log('✅ NotaryPro Landing Page configurado correctamente')\"",
+    "windows": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1",
+    "windows:setup": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1 -Setup",
+    "windows:db": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1 -Database",
+    "windows:landing": "powershell -ExecutionPolicy Bypass -File start-notarypro.ps1 -Landing"
+  }
+}

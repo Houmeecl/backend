@@ -1,0 +1,30 @@
+﻿# =============================================================================
+# NOTARYPRO BACKEND - CONFIGURACION DE DESPLIEGUE
+# =============================================================================
+# Generado automÃ¡ticamente el 2025-08-18 04:56:46
+# =============================================================================
+
+# ConfiguraciÃ³n del servidor
+SERVER_HOST=""
+SERVER_USER=""
+SERVER_PATH=""
+SSH_KEY=""
+
+# ConfiguraciÃ³n de la base de datos
+DB_HOST=""
+DB_NAME=""
+DB_USER=""
+DB_PASSWORD=""
+DATABASE_URL="postgres://:@/=require"
+
+# ConfiguraciÃ³n del dominio
+DOMAIN=""
+
+# ConfiguraciÃ³n de email
+SMTP_HOST=""
+SMTP_USER=""
+SMTP_PASS=""
+
+# ConfiguraciÃ³n adicional
+JWT_SECRET="notarypro_super_secret_jwt_key_660009_20250818"
+API_KEY="notarypro_api_key_791084"

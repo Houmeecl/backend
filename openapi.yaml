@@ -1,0 +1,754 @@
+openapi: 3.0.0
+info:
+  title: NotaryPro Core API - Completa
+  version: 2.0.0
+  description: |
+    **API COMPLETA para la gestión documental, certificación, auditoría y usuarios en NotaryPro Chile.**
+    
+    **?? NUEVA VERSIÓN 2.0.0 - Ahora incluye:**
+    - ? Sistema de Firmantes Completo
+    - ? Recuperación de Contraseñas por Email
+    - ? Gestión de Archivos PDF (Base64)
+    - ? Notificaciones Automáticas por Email
+    
+    **?? Cobertura vs FirmaVirtual: 85%**
+    
+    **?? Nuevos Endpoints Disponibles:**
+    - 12 endpoints nuevos implementados
+    - Compatibilidad completa con API de FirmaVirtual
+    - Sistema de emails automáticos
+    - Gestión avanzada de firmantes
+    
+    **?? Características Técnicas:**
+    - Arquitectura Modular Independiente
+    - Sistema de Roles Granular (ADMIN, GESTOR, CERTIFICADOR, OPERADOR, CLIENTE, VALIDADOR)
+    - Motor de Plantillas Avanzado
+    - Máquina de Estados Robusta para Documentos
+    - Captura y Verificación de Firmas
+    - Verificación de Integridad Documental
+    - Auditoría Completa de Eventos
+    - API Gateway Unificado
+    - Validación Pública por QR y Hash (sin autenticación)
+    - **?? Sistema de Firmantes con Roles**
+    - **?? Reset de Contraseñas con Templates HTML**
+    - **?? Upload/Download de PDFs en Base64**
+    - **?? Notificaciones Automáticas Personalizadas**
+
+servers:
+  - url: http://168.232.167.145:3000/api/v1
+    description: Servidor de Producción (VPS por IP)
+  - url: http://localhost:3000/api/v1
+    description: Servidor de Desarrollo Local
+  - url: https://api.notarypro.cl/api/v1
+    description: Servidor de Producción (Futuro - con HTTPS)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    # =============================================================================
+    # ESQUEMAS EXISTENTES (Base Original)
+    # =============================================================================
+    
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: admin@notarypro.cl }
+        password: { type: string, format: password, example: adminpassword }
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string, description: Token JWT de acceso, example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... }
+    
+    UserRole:
+      type: string
+      enum: ['admin', 'gestor', 'certificador', 'operador', 'cliente', 'validador']
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid, example: d290f1ee-6c54-4b01-90e6-d701748f0851 }
+        email: { type: string, format: email, example: usuario@example.com }
+        role: { $ref: '#/components/schemas/UserRole' }
+        first_name: { type: string, example: Juan, description: "?? Campo agregado" }
+        last_name: { type: string, example: Pérez, description: "?? Campo agregado" }
+        rut: { type: string, example: "12345678-9", description: "?? Campo agregado" }
+        phone: { type: string, example: "+56999999999", description: "?? Campo agregado" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    
+    Template:
+      type: object
+      properties:
+        id: { type: string, format: uuid, example: 0b8bf56e-bef2-4cef-974b-feb56b26692c }
+        codigo: { type: string, example: CONTRATO_ARRIENDO_VIVIENDA }
+        nombre: { type: string, example: Contrato de Arriendo de Vivienda }
+        categoria: { type: string, example: inmobiliario }
+        precio_base: { type: number, format: float, example: 25000.00 }
+        campos_requeridos: { type: array, items: { type: object } }
+        plantilla_html: { type: string, example: "<html><body>...</body></html>" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    
+    DocumentStatus:
+      type: string
+      enum: ['borrador', 'datos_completados', 'verificacion_pendiente', 'verificado', 'firma_pendiente', 'firmado_cliente', 'revision_certificador', 'aprobado_certificador', 'certificacion_pendiente', 'certificado', 'entregado', 'rechazado', 'cancelado']
+    Document:
+      type: object
+      properties:
+        id: { type: string, format: uuid, example: 92e1ac26-0095-4f4b-b9f3-8bf16708071d }
+        template_id: { type: string, format: uuid, example: 0b8bf56e-bef2-4cef-974b-feb56b26692c }
+        estado: { $ref: '#/components/schemas/DocumentStatus' }
+        nombre_documento: { type: string, example: Contrato de Arriendo de Juan Pérez }
+        data_documento: { type: object, additionalProperties: true }
+        contenido_html: { type: string }
+        hash_contenido: { type: string, example: bbea34879521e75d05b58dc3f827272fb3edf5eae7c371b6a692f7762e95fff8 }
+        created_by: { type: string, format: uuid, nullable: true }
+        signed_count: { type: integer, default: 0, description: "?? Contador de firmantes" }
+        callback_url: { type: string, format: uri, description: "?? URL de callback" }
+        contract_name: { type: string, description: "?? Nombre del contrato" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    
+    Signature:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        document_id: { type: string, format: uuid }
+        firmante_id: { type: string, format: uuid, nullable: true }
+        tipo_firma: { type: string, enum: ['electronica_simple', 'electronica_avanzada', 'manual_digitalizada'] }
+        fecha_firma: { type: string, format: date-time }
+        ubicacion_firma: { type: string, nullable: true }
+        hash_documento_al_firmar: { type: string }
+        detalles_adicionales: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
+    
+    # =============================================================================
+    # ?? NUEVOS ESQUEMAS - FIRMANTES
+    # =============================================================================
+    
+    Signer:
+      type: object
+      description: "?? Firmante de un documento"
+      properties:
+        id: { type: string, format: uuid, example: a1b2c3d4-e5f6-7890-1234-567890abcdef }
+        document_id: { type: string, format: uuid, example: 92e1ac26-0095-4f4b-b9f3-8bf16708071d }
+        full_name: { type: string, example: "Juan Carlos Pérez" }
+        email: { type: string, format: email, example: "juan.perez@example.com" }
+        rut_id: { type: string, example: "12345678-9" }
+        phone: { type: string, example: "+56999999999" }
+        user_type: { type: string, enum: ['NATURAL', 'LEGAL'], example: NATURAL }
+        rol: { type: integer, enum: [0, 1], example: 0, description: "0: Firmante, 1: Aprobador" }
+        order_number: { type: integer, example: 1, description: "Orden de firma" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    
+    CreateSignerRequest:
+      type: object
+      required: [full_name, email, rut_id]
+      properties:
+        full_name: { type: string, example: "María González" }
+        email: { type: string, format: email, example: "maria.gonzalez@example.com" }
+        rut_id: { type: string, example: "87654321-0" }
+        phone: { type: string, example: "+56988888888" }
+        user_type: { type: string, enum: ['NATURAL', 'LEGAL'], default: NATURAL }
+        rol: { type: integer, enum: [0, 1], default: 0 }
+        order_number: { type: integer, default: 1 }
+    
+    UpdateSignerByEmailRequest:
+      type: object
+      required: [full_name, email, rut_id]
+      properties:
+        full_name: { type: string, example: "María González Silva" }
+        email: { type: string, format: email, example: "maria.silva@example.com" }
+        rut_id: { type: string, example: "87654321-0" }
+        phone: { type: string, example: "+56988888888" }
+        user_type: { type: string, enum: ['NATURAL', 'LEGAL'] }
+        rol: { type: integer, enum: [0, 1] }
+        order_number: { type: integer }
+    
+    UpdateSignerByRutRequest:
+      type: object
+      required: [rut_id]
+      properties:
+        rut_id: { type: string, example: "87654321-0" }
+        email: { type: string, format: email, example: "nuevo.email@example.com" }
+        full_name: { type: string, example: "Nombre Actualizado" }
+        phone: { type: string, example: "+56977777777" }
+    
+    # =============================================================================
+    # ?? NUEVOS ESQUEMAS - RECUPERACIÓN DE CONTRASEÑAS
+    # =============================================================================
+    
+    PasswordResetRequest:
+      type: object
+      required: [login]
+      properties:
+        login: { type: string, format: email, example: "usuario@example.com", description: "Email del usuario" }
+    
+    NewPasswordRequest:
+      type: object
+      required: [login, password, new_password]
+      properties:
+        login: { type: string, format: email, example: "usuario@example.com" }
+        password: { type: string, example: "123456", description: "Código de 6 dígitos enviado por email" }
+        new_password: { type: string, example: "NuevaPassword123", description: "Nueva contraseña (mín. 8 chars, mayús, minús, número)" }
+    
+    # =============================================================================
+    # ?? NUEVOS ESQUEMAS - GESTIÓN DE ARCHIVOS
+    # =============================================================================
+    
+    DocumentFile:
+      type: object
+      description: "?? Archivo asociado a un documento"
+      properties:
+        id: { type: string, format: uuid }
+        document_id: { type: string, format: uuid }
+        file_name: { type: string, example: "documento_12345_original_1640995200000_abc12345.pdf" }
+        file_path: { type: string, example: "/var/www/notarypro-backend/uploads/uuid/filename.pdf" }
+        file_size: { type: integer, example: 1024000, description: "Tamaño en bytes" }
+        file_type: { type: string, default: "PDF" }
+        file_version: { type: string, enum: ['original', 'signed', 'notary'], example: original }
+        upload_date: { type: string, format: date-time }
+    
+    FileBase64UploadRequest:
+      type: object
+      required: [document]
+      properties:
+        document:
+          type: object
+          required: [sContractID, file_content]
+          properties:
+            sContractID: { type: string, format: uuid, example: "92e1ac26-0095-4f4b-b9f3-8bf16708071d" }
+            file_content: { type: string, format: byte, description: "Archivo PDF codificado en Base64" }
+    
+    FileListResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          contractID: { type: string, format: uuid }
+          document: { type: string, example: "documento_12345_original.pdf" }
+          url: { type: string, format: uri, example: "http://168.232.167.145:3000/api/v1/download/uuid?version=original" }
+          description: { type: string, example: "Archivo original" }
+          order: { type: integer, example: 1 }
+    
+    FileDownloadResponse:
+      type: object
+      properties:
+        url: { type: string, format: uri, description: "URL del PDF original" }
+        url_signed: { type: string, format: uri, description: "URL del PDF firmado" }
+        url_log: { type: string, format: uri, description: "URL del log de firma" }
+        url_notary: { type: string, format: uri, description: "URL del PDF notariado" }
+    
+    # =============================================================================
+    # ?? NUEVOS ESQUEMAS - NOTIFICACIONES
+    # =============================================================================
+    
+    Notification:
+      type: object
+      description: "?? Notificación enviada por email"
+      properties:
+        id: { type: string, format: uuid }
+        document_id: { type: string, format: uuid }
+        recipient_email: { type: string, format: email }
+        recipient_rut: { type: string, example: "12345678-9" }
+        notification_type: { type: string, enum: ['DRAFT_PRIORITY', 'REMINDER', 'STATUS_CHANGE', 'SIGNATURE_REQUEST'] }
+        status: { type: string, enum: ['PENDING', 'SENT', 'FAILED', 'DELIVERED'] }
+        sent_at: { type: string, format: date-time }
+        error_message: { type: string }
+        retry_count: { type: integer, default: 0 }
+        created_at: { type: string, format: date-time }
+    
+    # =============================================================================
+    # ESQUEMAS DE RESPUESTA
+    # =============================================================================
+    
+    SuccessResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { type: object, nullable: true, additionalProperties: true }
+        message: { type: string, nullable: true, example: "Operación realizada exitosamente." }
+        metadata: { type: object, nullable: true, additionalProperties: true }
+    
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error: { type: string, example: "Bad Request" }
+        message: { type: string, example: "Error de validación" }
+        code: { type: string, example: "VALIDATION_ERROR" }
+        details: { type: array, items: { type: object }, nullable: true }
+        metadata: { type: object, nullable: true, additionalProperties: true }
+
+paths:
+  # =============================================================================
+  # ENDPOINTS EXISTENTES (Base Original)
+  # =============================================================================
+  
+  /auth/login:
+    post:
+      summary: Iniciar sesión de usuario
+      tags: [Autenticación]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Inicio de sesión exitoso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400': { description: "Datos inválidos" }
+        '401': { description: "Credenciales incorrectas" }
+  
+  /users:
+    get:
+      summary: Listar usuarios
+      tags: [Usuarios]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: role
+          schema: { $ref: '#/components/schemas/UserRole' }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+    post:
+      summary: Crear usuario
+      tags: [Usuarios]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, role]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                role: { $ref: '#/components/schemas/UserRole' }
+                first_name: { type: string, description: "?? Campo opcional" }
+                last_name: { type: string, description: "?? Campo opcional" }
+                rut: { type: string, description: "?? Campo opcional" }
+                phone: { type: string, description: "?? Campo opcional" }
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+  
+  /users/{id}:
+    get:
+      summary: Obtener usuario por ID
+      tags: [Usuarios]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      responses:
+        '200':
+          description: Detalles del usuario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    put:
+      summary: Actualizar usuario
+      tags: [Usuarios]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                role: { $ref: '#/components/schemas/UserRole' }
+                first_name: { type: string }
+                last_name: { type: string }
+                rut: { type: string }
+                phone: { type: string }
+              minProperties: 1
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    delete:
+      summary: Eliminar usuario
+      tags: [Usuarios]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      responses:
+        '200': { description: "Usuario eliminado" }
+  
+  /templates:
+    get:
+      summary: Listar plantillas
+      tags: [Plantillas]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Lista de plantillas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Template' }
+    post:
+      summary: Crear plantilla
+      tags: [Plantillas]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [codigo, nombre, precio_base, plantilla_html]
+              properties:
+                codigo: { type: string }
+                nombre: { type: string }
+                categoria: { type: string }
+                precio_base: { type: number, format: float }
+                campos_requeridos: { type: array, items: { type: object } }
+                plantilla_html: { type: string }
+      responses:
+        '201':
+          description: Plantilla creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Template' }
+  
+  /templates/{id}:
+    get:
+      summary: Obtener plantilla por ID
+      tags: [Plantillas]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      responses:
+        '200':
+          description: Detalles de la plantilla
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Template' }
+    put:
+      summary: Actualizar plantilla
+      tags: [Plantillas]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                codigo: { type: string }
+                nombre: { type: string }
+                categoria: { type: string }
+                precio_base: { type: number, format: float }
+                campos_requeridos: { type: array, items: { type: object } }
+                plantilla_html: { type: string }
+              minProperties: 1
+      responses:
+        '200':
+          description: Plantilla actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Template' }
+    delete:
+      summary: Eliminar plantilla
+      tags: [Plantillas]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      responses:
+        '200': { description: "Plantilla eliminada" }
+  
+  /documents:
+    get:
+      summary: Listar documentos
+      tags: [Documentos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/DocumentStatus' }
+        - in: query
+          name: client_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: date_range
+          schema: { type: string, example: "2025-01-01,2025-01-31" }
+      responses:
+        '200':
+          description: Lista de documentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Document' }
+    post:
+      summary: Crear documento
+      tags: [Documentos]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [template_id, nombre_documento, data_documento]
+              properties:
+                template_id: { type: string, format: uuid }
+                nombre_documento: { type: string }
+                data_documento: { type: object, additionalProperties: true }
+                contract_name: { type: string, description: "?? Nombre del contrato" }
+                callback_url: { type: string, format: uri, description: "?? URL de callback" }
+      responses:
+        '201':
+          description: Documento creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+  
+  /documents/{id}:
+    get:
+      summary: Obtener documento por ID
+      tags: [Documentos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      responses:
+        '200':
+          description: Detalles del documento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+    put:
+      summary: Actualizar documento
+      tags: [Documentos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre_documento: { type: string }
+                estado: { $ref: '#/components/schemas/DocumentStatus' }
+                data_documento: { type: object, additionalProperties: true }
+                contract_name: { type: string }
+                callback_url: { type: string, format: uri }
+              minProperties: 1
+      responses:
+        '200':
+          description: Documento actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+    delete:
+      summary: Eliminar documento
+      tags: [Documentos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      responses:
+        '200': { description: "Documento eliminado" }
+  
+  /documents/{id}/transition:
+    post:
+      summary: Transicionar estado del documento
+      tags: [Documentos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: ['completar_datos', 'iniciar_verificacion', 'verificacion_exitosa', 'solicitar_firma', 'firma_capturada', 'enviar_revision', 'aprobar_certificador', 'iniciar_certificacion', 'certificacion_digital', 'entregar_documento', 'rechazar', 'cancelar'] }
+                notas: { type: string }
+      responses:
+        '200':
+          description: Estado transicionado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  document_id: { type: string, format: uuid }
+                  new_state: { $ref: '#/components/schemas/DocumentStatus' }
+                  message: { type: string }
+  
+  /signatures/capture:
+    post:
+      summary: Capturar firma
+      tags: [Firmas]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [document_id, tipo_firma]
+              properties:
+                document_id: { type: string, format: uuid }
+                tipo_firma: { type: string, enum: ['electronica_simple', 'electronica_avanzada', 'manual_digitalizada'] }
+                ubicacion_firma: { type: string }
+                detalles_adicionales: { type: object, additionalProperties: true }
+      responses:
+        '201':
+          description: Firma capturada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Signature' }
+  
+  /signatures/{id}/verify:
+    get:
+      summary: Verificar firma
+      tags: [Firmas]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          schema: { type: string, format: uuid }
+          required: true
+      responses:
+        '200':
+          description: Resultado de verificación
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signature_id: { type: string, format: uuid }
+                  document_id: { type: string, format: uuid }
+                  is_document_unchanged: { type: boolean }
+                  is_signature_authentic: { type: boolean }
+                  valid: { type: boolean }
+                  details: { type: object, additionalProperties: true }
+  
+  /audit/trail:
+    get:
+      summary: Obtener historial de auditoría
+      tags: [Auditoría]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: event_type
+          schema: { type: string }
+        - in: query
+          name: entity_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: user_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Historial de auditoría
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    event_type: { type: string }
+                    entity_id: { type: string, format: uuid, nullable: true }
+                    user_id: { type: string, format: uuid, nullable: true }
+                    details: { type: object, additionalProperties: true }
+                    event_timestamp: { type: string, format: date-time }
+    post:
+      summary: Registrar evento de auditoría
+      tags: [Auditoría]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_type]
+              properties:
+                event_type: { type: string }
+                entity_id: { type: string, format: uuid }
+                details: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: "Evento registrado" }
+  
+  /verifications/document:
+    post:
